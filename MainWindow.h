@@ -1,4 +1,4 @@
-﻿#ifndef MAINWINDOW_H
+#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -48,6 +48,8 @@ private slots:
     void showFAQ();
     void showHistory();
     void onBarcodeValidated(const QString& barcode, bool isValid);
+    void onImageProcessingFinished(const QString& barcode, bool success);
+    void onImageProcessingProgress(int percentage);
 
 private:
     // UI Components
@@ -93,9 +95,10 @@ private:
     // Image processing
     QImage currentImage;
     QLabel* imagePreview;
-    QPushButton* convertButton;
-    QPushButton* decodeButton;
+    QPushButton* analyzeImageButton;
     QPushButton* deleteImageButton;
+    QLabel* analysisStatusLabel;
+    QProgressBar* imageProgressBar;
 
     void setupUI();
     void setupConnections();
@@ -109,9 +112,15 @@ private:
     QString getFrameStyle() const;
     QString calculerCleChiffrement(const QString& douzeChiffres);
     void setupImageProcessingView();
+    void processImageAutomatically();
+    void analyzeImageWithMultipleTechniques(const QImage& image);
     QImage enhanceImageForBarcode(const QImage& originalImage);
     QString detectBarcodeFromImage(const QImage& image);
     QImage createBinaryImage(const QImage& grayImage);
+    QImage applyGaussianBlur(const QImage& image);
+    QImage applySharpenFilter(const QImage& image);
+    QImage adjustGamma(const QImage& image, double gamma);
+    QStringList tryMultipleDetectionMethods(const QImage& image);
 };
 
 #endif // MAINWINDOW_H

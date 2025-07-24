@@ -5,7 +5,7 @@ CONFIG += c++17
 TARGET = EPOBarcodeValidator
 TEMPLATE = app
 
-# Définir la version de l'application
+# Dï¿½finir la version de l'application
 VERSION = 1.0.0
 QMAKE_TARGET_COMPANY = "EPO Project"
 QMAKE_TARGET_PRODUCT = "EPO Barcode Validator"
@@ -31,10 +31,10 @@ HEADERS += \
     CameraWidget.h \
     ThemeManager.h
 
-# Ressources (si vous avez des icônes)
+# Ressources (si vous avez des icï¿½nes)
 # RESOURCES += resources.qrc
 
-# Configuration pour différentes plateformes
+# Configuration pour diffï¿½rentes plateformes
 win32 {
     RC_ICONS = icon.ico
     QMAKE_TARGET_PRODUCT = "EPO Barcode Validator"
@@ -80,7 +80,7 @@ win32 {
 }
 
 unix {
-    # Pour Linux/Mac avec OpenCV installé via package manager
-    LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio
-    INCLUDEPATH += /usr/local/include/opencv4
+    # Pour Linux/Mac avec OpenCV installï¿½ via package manager
+    LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio -lZXing
+    INCLUDEPATH += /usr/include/opencv4
 }
