@@ -121,6 +121,22 @@ private:
     QImage applySharpenFilter(const QImage& image);
     QImage adjustGamma(const QImage& image, double gamma);
     QStringList tryMultipleDetectionMethods(const QImage& image);
+    
+    // Méthodes de prétraitement avancées (style Google Lens)
+    QImage preprocessImageAdvanced(const QImage& originalImage);
+    QImage normalizeIllumination(const QImage& image);
+    QImage enhanceContrast(const QImage& image);
+    QImage correctPerspective(const QImage& image);
+    QImage removeNoise(const QImage& image);
+    QImage binarizeAdaptive(const QImage& image);
+    QImage morphologyClose(const QImage& image);
+    QImage detectAndCorrectRotation(const QImage& image);
+    QImage cropToBarcode(const QImage& image);
+    QImage standardizeSize(const QImage& image, int targetWidth = 800);
+    double calculateImageSharpness(const QImage& image);
+    QImage unsharpMask(const QImage& image, double amount = 1.5);
+    QImage clahe(const QImage& image); // Contrast Limited Adaptive Histogram Equalization
+    double calculateHorizontalLineScore(const QImage& image);
 };
 
 #endif // MAINWINDOW_H

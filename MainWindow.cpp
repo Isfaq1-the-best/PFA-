@@ -867,74 +867,130 @@ void MainWindow::analyzeImageWithMultipleTechniques(const QImage& image)
 {
     QStringList detectedCodes;
     
-    // Technique 1: Image originale
-    imageProgressBar->setValue(10);
-    analysisStatusLabel->setText("Analyse avec l'image originale...");
+    // Phase 1: Prétraitement avancé style Google Lens
+    imageProgressBar->setValue(5);
+    analysisStatusLabel->setText("🔍 Prétraitement intelligent de l'image...");
     QApplication::processEvents();
     
-    QString code = detectBarcodeFromImage(image);
+    QImage preprocessedImage = preprocessImageAdvanced(image);
+    
+    // Phase 2: Test avec image prétraitée
+    imageProgressBar->setValue(15);
+    analysisStatusLabel->setText("📊 Analyse de l'image optimisée...");
+    QApplication::processEvents();
+    
+    QString code = detectBarcodeFromImage(preprocessedImage);
     if (!code.isEmpty()) {
         detectedCodes.append(code);
+        qDebug() << "Code détecté avec prétraitement avancé:" << code;
     }
 
-    // Technique 2: Image avec amélioration du contraste
-    imageProgressBar->setValue(25);
-    analysisStatusLabel->setText("Amélioration du contraste...");
-    QApplication::processEvents();
-    
-    QImage enhancedImage = enhanceImageForBarcode(image);
-    code = detectBarcodeFromImage(enhancedImage);
-    if (!code.isEmpty() && !detectedCodes.contains(code)) {
-        detectedCodes.append(code);
+    // Phase 3: Si pas trouvé, essayer l'image originale
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(25);
+        analysisStatusLabel->setText("📷 Analyse de l'image originale...");
+        QApplication::processEvents();
+        
+        code = detectBarcodeFromImage(image);
+        if (!code.isEmpty()) {
+            detectedCodes.append(code);
+        }
     }
 
-    // Technique 3: Image avec flou gaussien pour réduire le bruit
-    imageProgressBar->setValue(40);
-    analysisStatusLabel->setText("Application du filtre anti-bruit...");
-    QApplication::processEvents();
-    
-    QImage blurredImage = applyGaussianBlur(image);
-    code = detectBarcodeFromImage(blurredImage);
-    if (!code.isEmpty() && !detectedCodes.contains(code)) {
-        detectedCodes.append(code);
+    // Phase 4: Normalisation de l'éclairage
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(35);
+        analysisStatusLabel->setText("💡 Correction de l'éclairage...");
+        QApplication::processEvents();
+        
+        QImage illuminationCorrected = normalizeIllumination(image);
+        code = detectBarcodeFromImage(illuminationCorrected);
+        if (!code.isEmpty() && !detectedCodes.contains(code)) {
+            detectedCodes.append(code);
+        }
     }
 
-    // Technique 4: Image avec filtre de netteté
-    imageProgressBar->setValue(55);
-    analysisStatusLabel->setText("Application du filtre de netteté...");
-    QApplication::processEvents();
-    
-    QImage sharpenedImage = applySharpenFilter(image);
-    code = detectBarcodeFromImage(sharpenedImage);
-    if (!code.isEmpty() && !detectedCodes.contains(code)) {
-        detectedCodes.append(code);
+    // Phase 5: Amélioration du contraste adaptatif
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(45);
+        analysisStatusLabel->setText("🌗 Amélioration du contraste adaptatif...");
+        QApplication::processEvents();
+        
+        QImage contrastEnhanced = clahe(image);
+        code = detectBarcodeFromImage(contrastEnhanced);
+        if (!code.isEmpty() && !detectedCodes.contains(code)) {
+            detectedCodes.append(code);
+        }
     }
 
-    // Technique 5: Ajustement gamma (éclaircissement)
-    imageProgressBar->setValue(70);
-    analysisStatusLabel->setText("Ajustement de la luminosité...");
-    QApplication::processEvents();
-    
-    QImage gammaImage = adjustGamma(image, 1.5);
-    code = detectBarcodeFromImage(gammaImage);
-    if (!code.isEmpty() && !detectedCodes.contains(code)) {
-        detectedCodes.append(code);
+    // Phase 6: Détection et correction de rotation
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(55);
+        analysisStatusLabel->setText("🔄 Correction de l'orientation...");
+        QApplication::processEvents();
+        
+        QImage rotationCorrected = detectAndCorrectRotation(image);
+        code = detectBarcodeFromImage(rotationCorrected);
+        if (!code.isEmpty() && !detectedCodes.contains(code)) {
+            detectedCodes.append(code);
+        }
     }
 
-    // Technique 6: Ajustement gamma (assombrissement)
-    imageProgressBar->setValue(85);
-    analysisStatusLabel->setText("Optimisation finale...");
-    QApplication::processEvents();
-    
-    QImage darkGammaImage = adjustGamma(image, 0.7);
-    code = detectBarcodeFromImage(darkGammaImage);
-    if (!code.isEmpty() && !detectedCodes.contains(code)) {
-        detectedCodes.append(code);
+    // Phase 7: Binarisation adaptative avancée
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(65);
+        analysisStatusLabel->setText("⚫ Binarisation adaptative...");
+        QApplication::processEvents();
+        
+        QImage binarized = binarizeAdaptive(image);
+        code = detectBarcodeFromImage(binarized);
+        if (!code.isEmpty() && !detectedCodes.contains(code)) {
+            detectedCodes.append(code);
+        }
+    }
+
+    // Phase 8: Masque de netteté (Unsharp Mask)
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(75);
+        analysisStatusLabel->setText("✨ Application du masque de netteté...");
+        QApplication::processEvents();
+        
+        QImage unsharpened = unsharpMask(image);
+        code = detectBarcodeFromImage(unsharpened);
+        if (!code.isEmpty() && !detectedCodes.contains(code)) {
+            detectedCodes.append(code);
+        }
+    }
+
+    // Phase 9: Tentative avec toutes les améliorations combinées
+    if (detectedCodes.isEmpty()) {
+        imageProgressBar->setValue(85);
+        analysisStatusLabel->setText("🚀 Analyse finale multi-technique...");
+        QApplication::processEvents();
+        
+        // Appliquer une série de traitements en cascade
+        QImage finalImage = image;
+        finalImage = normalizeIllumination(finalImage);
+        finalImage = clahe(finalImage);
+        finalImage = unsharpMask(finalImage);
+        finalImage = removeNoise(finalImage);
+        
+        code = detectBarcodeFromImage(finalImage);
+        if (!code.isEmpty() && !detectedCodes.contains(code)) {
+            detectedCodes.append(code);
+        }
     }
 
     // Finalisation
     imageProgressBar->setValue(100);
     analyzeImageButton->setEnabled(true);
+
+    if (!detectedCodes.isEmpty()) {
+        analysisStatusLabel->setText("✅ Code-barre détecté avec succès !");
+        qDebug() << "Codes détectés:" << detectedCodes;
+    } else {
+        analysisStatusLabel->setText("❌ Aucun code-barre EAN-13 détecté");
+    }
 
     // Traitement des résultats
     onImageProcessingFinished(detectedCodes.isEmpty() ? QString() : detectedCodes.first(), !detectedCodes.isEmpty());
@@ -1121,4 +1177,552 @@ void MainWindow::onImageProcessingFinished(const QString& barcode, bool success)
 void MainWindow::onImageProcessingProgress(int percentage)
 {
     imageProgressBar->setValue(percentage);
+}
+
+// ===== MÉTHODES DE PRÉTRAITEMENT AVANCÉES (STYLE GOOGLE LENS) =====
+
+QImage MainWindow::preprocessImageAdvanced(const QImage& originalImage)
+{
+    if (originalImage.isNull()) return QImage();
+    
+    qDebug() << "🔍 Début du prétraitement avancé...";
+    
+    QImage processed = originalImage;
+    
+    // 1. Standardisation de la taille
+    processed = standardizeSize(processed);
+    
+    // 2. Correction de l'illumination
+    processed = normalizeIllumination(processed);
+    
+    // 3. Réduction du bruit
+    processed = removeNoise(processed);
+    
+    // 4. Amélioration du contraste adaptatif
+    processed = clahe(processed);
+    
+    // 5. Amélioration de la netteté si nécessaire
+    double sharpness = calculateImageSharpness(processed);
+    if (sharpness < 50.0) { // Seuil de netteté
+        processed = unsharpMask(processed);
+    }
+    
+    qDebug() << "✅ Prétraitement avancé terminé - Netteté:" << sharpness;
+    
+    return processed;
+}
+
+QImage MainWindow::normalizeIllumination(const QImage& image)
+{
+    if (image.isNull()) return QImage();
+    
+    // Correction de l'éclairage non uniforme (similaire à Google Lens)
+    QImage result = image.convertToFormat(QImage::Format_RGB888);
+    
+    // Calculer l'éclairage moyen par région
+    const int blockSize = 32;
+    const int width = result.width();
+    const int height = result.height();
+    
+    QVector<QVector<double>> illuminationMap(height / blockSize + 1, 
+                                           QVector<double>(width / blockSize + 1, 0.0));
+    
+    // Analyser l'éclairage par blocs
+    for (int by = 0; by < height; by += blockSize) {
+        for (int bx = 0; bx < width; bx += blockSize) {
+            double totalLuminance = 0;
+            int pixelCount = 0;
+            
+            for (int y = by; y < qMin(by + blockSize, height); ++y) {
+                for (int x = bx; x < qMin(bx + blockSize, width); ++x) {
+                    QRgb pixel = result.pixel(x, y);
+                    // Calcul de la luminance (formule perceptuelle)
+                    double luminance = 0.299 * qRed(pixel) + 0.587 * qGreen(pixel) + 0.114 * qBlue(pixel);
+                    totalLuminance += luminance;
+                    pixelCount++;
+                }
+            }
+            
+            illuminationMap[by / blockSize][bx / blockSize] = totalLuminance / pixelCount;
+        }
+    }
+    
+    // Calculer l'éclairage cible (médiane)
+    QVector<double> allValues;
+    for (const auto& row : illuminationMap) {
+        for (double val : row) {
+            allValues.append(val);
+        }
+    }
+    std::sort(allValues.begin(), allValues.end());
+    double targetIllumination = allValues[allValues.size() / 2];
+    
+    // Appliquer la correction
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int blockY = qMin(y / blockSize, illuminationMap.size() - 1);
+            int blockX = qMin(x / blockSize, illuminationMap[0].size() - 1);
+            
+            double currentIllumination = illuminationMap[blockY][blockX];
+            double correction = targetIllumination / qMax(currentIllumination, 1.0);
+            
+            QRgb pixel = result.pixel(x, y);
+            int r = qBound(0, (int)(qRed(pixel) * correction), 255);
+            int g = qBound(0, (int)(qGreen(pixel) * correction), 255);
+            int b = qBound(0, (int)(qBlue(pixel) * correction), 255);
+            
+            result.setPixel(x, y, qRgb(r, g, b));
+        }
+    }
+    
+    return result;
+}
+
+QImage MainWindow::clahe(const QImage& image)
+{
+    // Contrast Limited Adaptive Histogram Equalization
+    if (image.isNull()) return QImage();
+    
+    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
+    QImage result = grayImage.copy();
+    
+    const int tileSize = 64; // Taille des tuiles
+    const double clipLimit = 2.0; // Limite de contraste
+    
+    int width = grayImage.width();
+    int height = grayImage.height();
+    
+    // Traiter chaque tuile
+    for (int tileY = 0; tileY < height; tileY += tileSize) {
+        for (int tileX = 0; tileX < width; tileX += tileSize) {
+            int endY = qMin(tileY + tileSize, height);
+            int endX = qMin(tileX + tileSize, width);
+            
+            // Calculer l'histogramme de la tuile
+            QVector<int> histogram(256, 0);
+            int pixelCount = 0;
+            
+            for (int y = tileY; y < endY; ++y) {
+                for (int x = tileX; x < endX; ++x) {
+                    int gray = qGray(grayImage.pixel(x, y));
+                    histogram[gray]++;
+                    pixelCount++;
+                }
+            }
+            
+            // Appliquer la limitation de contraste
+            int clipValue = (int)(clipLimit * pixelCount / 256.0);
+            int excess = 0;
+            
+            for (int i = 0; i < 256; ++i) {
+                if (histogram[i] > clipValue) {
+                    excess += histogram[i] - clipValue;
+                    histogram[i] = clipValue;
+                }
+            }
+            
+            // Redistribuer l'excès
+            int redistribution = excess / 256;
+            for (int i = 0; i < 256; ++i) {
+                histogram[i] += redistribution;
+            }
+            
+            // Calculer la fonction de transformation
+            QVector<int> transform(256);
+            int cumulative = 0;
+            for (int i = 0; i < 256; ++i) {
+                cumulative += histogram[i];
+                transform[i] = (cumulative * 255) / pixelCount;
+            }
+            
+            // Appliquer la transformation
+            for (int y = tileY; y < endY; ++y) {
+                for (int x = tileX; x < endX; ++x) {
+                    int gray = qGray(grayImage.pixel(x, y));
+                    int newGray = transform[gray];
+                    result.setPixel(x, y, qRgb(newGray, newGray, newGray));
+                }
+            }
+        }
+    }
+    
+    return result;
+}
+
+QImage MainWindow::unsharpMask(const QImage& image, double amount)
+{
+    if (image.isNull()) return QImage();
+    
+    // Masque de netteté (Unsharp Mask) - technique professionnelle
+    QImage original = image.convertToFormat(QImage::Format_RGB888);
+    QImage blurred = applyGaussianBlur(original);
+    QImage result = original.copy();
+    
+    for (int y = 0; y < original.height(); ++y) {
+        for (int x = 0; x < original.width(); ++x) {
+            QRgb origPixel = original.pixel(x, y);
+            QRgb blurPixel = blurred.pixel(x, y);
+            
+            // Calculer la différence (masque)
+            int rDiff = qRed(origPixel) - qRed(blurPixel);
+            int gDiff = qGreen(origPixel) - qGreen(blurPixel);
+            int bDiff = qBlue(origPixel) - qBlue(blurPixel);
+            
+            // Appliquer le masque avec le facteur d'intensité
+            int newR = qBound(0, qRed(origPixel) + (int)(rDiff * amount), 255);
+            int newG = qBound(0, qGreen(origPixel) + (int)(gDiff * amount), 255);
+            int newB = qBound(0, qBlue(origPixel) + (int)(bDiff * amount), 255);
+            
+            result.setPixel(x, y, qRgb(newR, newG, newB));
+        }
+    }
+    
+    return result;
+}
+
+QImage MainWindow::removeNoise(const QImage& image)
+{
+    if (image.isNull()) return QImage();
+    
+    // Filtre médian pour réduire le bruit
+    QImage result = image.convertToFormat(QImage::Format_RGB888);
+    const int filterSize = 3;
+    const int offset = filterSize / 2;
+    
+    for (int y = offset; y < image.height() - offset; ++y) {
+        for (int x = offset; x < image.width() - offset; ++x) {
+            QVector<int> rValues, gValues, bValues;
+            
+            // Collecter les valeurs dans le voisinage
+            for (int ky = -offset; ky <= offset; ++ky) {
+                for (int kx = -offset; kx <= offset; ++kx) {
+                    QRgb pixel = image.pixel(x + kx, y + ky);
+                    rValues.append(qRed(pixel));
+                    gValues.append(qGreen(pixel));
+                    bValues.append(qBlue(pixel));
+                }
+            }
+            
+            // Trier et prendre la médiane
+            std::sort(rValues.begin(), rValues.end());
+            std::sort(gValues.begin(), gValues.end());
+            std::sort(bValues.begin(), bValues.end());
+            
+            int medianIndex = rValues.size() / 2;
+            result.setPixel(x, y, qRgb(rValues[medianIndex], 
+                                     gValues[medianIndex], 
+                                     bValues[medianIndex]));
+        }
+    }
+    
+    return result;
+}
+
+QImage MainWindow::binarizeAdaptive(const QImage& image)
+{
+    if (image.isNull()) return QImage();
+    
+    // Binarisation adaptative (méthode d'Otsu améliorée)
+    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
+    QImage result(grayImage.size(), QImage::Format_RGB888);
+    
+    const int windowSize = 51; // Fenêtre locale
+    const int offset = windowSize / 2;
+    
+    for (int y = 0; y < grayImage.height(); ++y) {
+        for (int x = 0; x < grayImage.width(); ++x) {
+            // Définir la fenêtre locale
+            int startY = qMax(0, y - offset);
+            int endY = qMin(grayImage.height() - 1, y + offset);
+            int startX = qMax(0, x - offset);
+            int endX = qMin(grayImage.width() - 1, x + offset);
+            
+            // Calculer l'histogramme local
+            QVector<int> histogram(256, 0);
+            int pixelCount = 0;
+            
+            for (int ly = startY; ly <= endY; ++ly) {
+                for (int lx = startX; lx <= endX; ++lx) {
+                    int gray = qGray(grayImage.pixel(lx, ly));
+                    histogram[gray]++;
+                    pixelCount++;
+                }
+            }
+            
+            // Calculer le seuil optimal (Otsu)
+            double totalMean = 0;
+            for (int i = 0; i < 256; ++i) {
+                totalMean += i * histogram[i];
+            }
+            totalMean /= pixelCount;
+            
+            double maxVariance = 0;
+            int optimalThreshold = 128;
+            
+            int cumulativeSum = 0;
+            double cumulativeMean = 0;
+            
+            for (int threshold = 0; threshold < 256; ++threshold) {
+                cumulativeSum += histogram[threshold];
+                if (cumulativeSum == 0) continue;
+                
+                cumulativeMean += threshold * histogram[threshold];
+                
+                double w1 = (double)cumulativeSum / pixelCount;
+                double w2 = 1.0 - w1;
+                
+                if (w2 == 0) break;
+                
+                double mean1 = cumulativeMean / cumulativeSum;
+                double mean2 = (totalMean * pixelCount - cumulativeMean) / (pixelCount - cumulativeSum);
+                
+                double variance = w1 * w2 * (mean1 - mean2) * (mean1 - mean2);
+                
+                if (variance > maxVariance) {
+                    maxVariance = variance;
+                    optimalThreshold = threshold;
+                }
+            }
+            
+            // Appliquer le seuil
+            int currentGray = qGray(grayImage.pixel(x, y));
+            int binaryValue = (currentGray > optimalThreshold) ? 255 : 0;
+            result.setPixel(x, y, qRgb(binaryValue, binaryValue, binaryValue));
+        }
+    }
+    
+    return result;
+}
+
+QImage MainWindow::detectAndCorrectRotation(const QImage& image)
+{
+    if (image.isNull()) return QImage();
+    
+    // Détection et correction de rotation simple
+    // (Version simplifiée - dans un vrai système, on utiliserait la transformée de Hough)
+    
+    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
+    
+    // Tester quelques angles de rotation couramment nécessaires
+    QVector<double> testAngles = {-5, -2, -1, 0, 1, 2, 5, -10, 10};
+    double bestAngle = 0;
+    double bestScore = -1;
+    
+    for (double angle : testAngles) {
+        QTransform transform;
+        transform.rotate(angle);
+        QImage rotated = grayImage.transformed(transform, Qt::SmoothTransformation);
+        
+        // Calculer un score de "rectitude" basé sur les lignes horizontales
+        double score = calculateHorizontalLineScore(rotated);
+        
+        if (score > bestScore) {
+            bestScore = score;
+            bestAngle = angle;
+        }
+    }
+    
+    // Appliquer la meilleure rotation trouvée
+    if (qAbs(bestAngle) > 0.5) {
+        QTransform transform;
+        transform.rotate(bestAngle);
+        return image.transformed(transform, Qt::SmoothTransformation);
+    }
+    
+    return image;
+}
+
+double MainWindow::calculateHorizontalLineScore(const QImage& image)
+{
+    if (image.isNull()) return 0;
+    
+    // Calculer un score basé sur la présence de lignes horizontales
+    // (indicateur de bonne orientation pour un code-barre)
+    
+    double score = 0;
+    int width = image.width();
+    int height = image.height();
+    
+    // Analyser les transitions horizontales (noir->blanc ou blanc->noir)
+    for (int y = height / 4; y < 3 * height / 4; ++y) { // Zone centrale
+        int transitions = 0;
+        int lastGray = qGray(image.pixel(0, y));
+        
+        for (int x = 1; x < width; ++x) {
+            int currentGray = qGray(image.pixel(x, y));
+            if (qAbs(currentGray - lastGray) > 50) { // Seuil de transition
+                transitions++;
+            }
+            lastGray = currentGray;
+        }
+        
+        // Les codes-barres ont beaucoup de transitions horizontales
+        score += transitions;
+    }
+    
+    return score / (height / 2); // Normaliser
+}
+
+QImage MainWindow::standardizeSize(const QImage& image, int targetWidth)
+{
+    if (image.isNull()) return QImage();
+    
+    // Redimensionner l'image pour optimiser la détection
+    if (image.width() < targetWidth) {
+        // Agrandir si trop petite
+        return image.scaledToWidth(targetWidth, Qt::SmoothTransformation);
+    } else if (image.width() > targetWidth * 2) {
+        // Réduire si trop grande
+        return image.scaledToWidth(targetWidth, Qt::SmoothTransformation);
+    }
+    
+    return image; // Taille OK
+}
+
+double MainWindow::calculateImageSharpness(const QImage& image)
+{
+    if (image.isNull()) return 0;
+    
+    // Calculer la netteté en utilisant la variance du Laplacien
+    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
+    
+    // Filtre Laplacien pour détecter les contours
+    const int laplacian[3][3] = {
+        {0, -1, 0},
+        {-1, 4, -1},
+        {0, -1, 0}
+    };
+    
+    double totalVariance = 0;
+    int count = 0;
+    
+    for (int y = 1; y < grayImage.height() - 1; ++y) {
+        for (int x = 1; x < grayImage.width() - 1; ++x) {
+            int sum = 0;
+            for (int ky = -1; ky <= 1; ++ky) {
+                for (int kx = -1; kx <= 1; ++kx) {
+                    int gray = qGray(grayImage.pixel(x + kx, y + ky));
+                    sum += gray * laplacian[ky + 1][kx + 1];
+                }
+            }
+            totalVariance += sum * sum;
+            count++;
+        }
+    }
+    
+    return sqrt(totalVariance / count);
+}
+
+QImage MainWindow::enhanceContrast(const QImage& image)
+{
+    if (image.isNull()) return QImage();
+    
+    // Amélioration du contraste par étirement d'histogramme
+    QImage result = image.convertToFormat(QImage::Format_RGB888);
+    
+    // Trouver min et max pour chaque canal
+    int minR = 255, maxR = 0;
+    int minG = 255, maxG = 0;
+    int minB = 255, maxB = 0;
+    
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            QRgb pixel = image.pixel(x, y);
+            int r = qRed(pixel);
+            int g = qGreen(pixel);
+            int b = qBlue(pixel);
+            
+            minR = qMin(minR, r); maxR = qMax(maxR, r);
+            minG = qMin(minG, g); maxG = qMax(maxG, g);
+            minB = qMin(minB, b); maxB = qMax(maxB, b);
+        }
+    }
+    
+    // Éviter la division par zéro
+    int rangeR = qMax(1, maxR - minR);
+    int rangeG = qMax(1, maxG - minG);
+    int rangeB = qMax(1, maxB - minB);
+    
+    // Appliquer l'étirement
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            QRgb pixel = image.pixel(x, y);
+            
+            int newR = ((qRed(pixel) - minR) * 255) / rangeR;
+            int newG = ((qGreen(pixel) - minG) * 255) / rangeG;
+            int newB = ((qBlue(pixel) - minB) * 255) / rangeB;
+            
+            result.setPixel(x, y, qRgb(newR, newG, newB));
+        }
+    }
+    
+    return result;
+}
+
+QImage MainWindow::correctPerspective(const QImage& image)
+{
+    // Version simplifiée - dans un vrai système Google Lens,
+    // on utiliserait la détection de contours et transformation de perspective
+    return image; // Placeholder pour l'instant
+}
+
+QImage MainWindow::cropToBarcode(const QImage& image)
+{
+    // Version simplifiée - détection automatique de la région du code-barre
+    return image; // Placeholder pour l'instant
+}
+
+QImage MainWindow::morphologyClose(const QImage& image)
+{
+    if (image.isNull()) return QImage();
+    
+    // Opération morphologique de fermeture (dilatation suivie d'érosion)
+    // Utile pour connecter les éléments fragmentés du code-barre
+    
+    QImage binary = binarizeAdaptive(image);
+    QImage result = binary.copy();
+    
+    const int kernelSize = 3;
+    const int offset = kernelSize / 2;
+    
+    // Dilatation
+    for (int y = offset; y < binary.height() - offset; ++y) {
+        for (int x = offset; x < binary.width() - offset; ++x) {
+            bool foundWhite = false;
+            
+            for (int ky = -offset; ky <= offset && !foundWhite; ++ky) {
+                for (int kx = -offset; kx <= offset && !foundWhite; ++kx) {
+                    if (qRed(binary.pixel(x + kx, y + ky)) > 128) {
+                        foundWhite = true;
+                    }
+                }
+            }
+            
+            if (foundWhite) {
+                result.setPixel(x, y, qRgb(255, 255, 255));
+            }
+        }
+    }
+    
+    // Érosion
+    binary = result.copy();
+    for (int y = offset; y < binary.height() - offset; ++y) {
+        for (int x = offset; x < binary.width() - offset; ++x) {
+            bool allWhite = true;
+            
+            for (int ky = -offset; ky <= offset && allWhite; ++ky) {
+                for (int kx = -offset; kx <= offset && allWhite; ++kx) {
+                    if (qRed(binary.pixel(x + kx, y + ky)) < 128) {
+                        allWhite = false;
+                    }
+                }
+            }
+            
+            if (!allWhite) {
+                result.setPixel(x, y, qRgb(0, 0, 0));
+            }
+        }
+    }
+    
+    return result;
 }

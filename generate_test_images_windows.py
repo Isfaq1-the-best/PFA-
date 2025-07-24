@@ -108,12 +108,14 @@ def create_barcode_image(code, width=600, height=200):
     return image
 
 def create_test_images():
-    """Crée plusieurs images de test avec différents codes EAN-13"""
+    """Crée plusieurs images de test avec différents codes EAN-13 et défis de prétraitement"""
     
     test_codes = [
         ("3760123456789", "Code EAN-13 standard"),
         ("8901234567890", "Code avec différent préfixe"),
-        ("4567890123451", "Code de test boutique")
+        ("4567890123451", "Code de test boutique"),
+        ("3017620422003", "Code produit Nutella (test réel)"),
+        ("8710103878873", "Code produit Philips (test réel)")
     ]
     
     print("Génération des images de test pour Windows...")
@@ -193,6 +195,165 @@ def create_test_images():
     print("  • test_multi_ean13.png")
     
     print("\n💡 Utilisez ces images pour tester l'importation dans l'application EPO Barcode Validator")
+    
+    # Créer des images avec défis de prétraitement
+    create_challenging_images()
+
+def create_challenging_images():
+    """Crée des images avec des défis spécifiques pour tester le prétraitement avancé"""
+    
+    print("\n🎯 Génération d'images de test avancées (défis de prétraitement)...")
+    
+    base_code = "3760123456789"
+    base_image = create_barcode_image(base_code, width=400, height=150)
+    
+    # 1. Image avec bruit
+    print("  Création d'une image bruitée...")
+    noisy_image = add_noise(base_image)
+    save_challenge_image(noisy_image, "noisy", "Image avec bruit électronique")
+    
+    # 2. Image avec éclairage non uniforme
+    print("  Création d'une image avec éclairage non uniforme...")
+    uneven_image = add_uneven_lighting(base_image)
+    save_challenge_image(uneven_image, "uneven_lighting", "Éclairage non uniforme")
+    
+    # 3. Image floue
+    print("  Création d'une image floue...")
+    blurry_image = add_blur(base_image)
+    save_challenge_image(blurry_image, "blurry", "Image floue (bougé)")
+    
+    # 4. Image avec rotation
+    print("  Création d'une image avec rotation...")
+    rotated_image = add_rotation(base_image, -7)
+    save_challenge_image(rotated_image, "rotated", "Image légèrement rotée")
+    
+    # 5. Image avec faible contraste
+    print("  Création d'une image à faible contraste...")
+    low_contrast = reduce_contrast(base_image)
+    save_challenge_image(low_contrast, "low_contrast", "Faible contraste")
+    
+    # 6. Image sur-exposée
+    print("  Création d'une image sur-exposée...")
+    overexposed = overexpose_image(base_image)
+    save_challenge_image(overexposed, "overexposed", "Image sur-exposée")
+    
+    # 7. Image sous-exposée
+    print("  Création d'une image sous-exposée...")
+    underexposed = underexpose_image(base_image)
+    save_challenge_image(underexposed, "underexposed", "Image sous-exposée")
+    
+    print("\n✅ Images de test avancées créées !")
+    print("\n🔬 Images de défi générées :")
+    challenges = ["noisy", "uneven_lighting", "blurry", "rotated", "low_contrast", "overexposed", "underexposed"]
+    for challenge in challenges:
+        print(f"  • test_challenge_{challenge}.png")
+    
+    print("\n🚀 Ces images testent les capacités de prétraitement avancé !")
+
+def add_noise(image):
+    """Ajoute du bruit à l'image"""
+    import random
+    noisy = image.copy()
+    draw = ImageDraw.Draw(noisy)
+    width, height = noisy.size
+    
+    # Ajouter du bruit salt & pepper
+    for _ in range(width * height // 20):  # 5% de pixels
+        x = random.randint(0, width - 1)
+        y = random.randint(0, height - 1)
+        color = 255 if random.random() > 0.5 else 0
+        draw.point((x, y), fill=(color, color, color))
+    
+    return noisy
+
+def add_uneven_lighting(image):
+    """Simule un éclairage non uniforme"""
+    from PIL import ImageEnhance
+    result = Image.new('RGB', image.size, 'white')
+    
+    # Créer un gradient d'éclairage
+    width, height = image.size
+    for y in range(height):
+        for x in range(width):
+            # Gradient diagonal
+            brightness = 0.3 + 0.7 * (x + y) / (width + height)
+            pixel = image.getpixel((x, y))
+            if isinstance(pixel, tuple):
+                new_pixel = tuple(int(c * brightness) for c in pixel)
+            else:
+                new_pixel = int(pixel * brightness)
+            result.putpixel((x, y), new_pixel)
+    
+    return result
+
+def add_blur(image):
+    """Ajoute un flou de mouvement"""
+    from PIL import ImageFilter
+    return image.filter(ImageFilter.GaussianBlur(radius=2))
+
+def add_rotation(image, angle):
+    """Fait tourner l'image"""
+    return image.rotate(angle, expand=True, fillcolor='white')
+
+def reduce_contrast(image):
+    """Réduit le contraste de l'image"""
+    from PIL import ImageEnhance
+    enhancer = ImageEnhance.Contrast(image)
+    return enhancer.enhance(0.3)  # Réduction drastique du contraste
+
+def overexpose_image(image):
+    """Sur-expose l'image"""
+    from PIL import ImageEnhance
+    enhancer = ImageEnhance.Brightness(image)
+    return enhancer.enhance(1.8)  # Augmentation de la luminosité
+
+def underexpose_image(image):
+    """Sous-expose l'image"""
+    from PIL import ImageEnhance
+    enhancer = ImageEnhance.Brightness(image)
+    return enhancer.enhance(0.3)  # Réduction de la luminosité
+
+def save_challenge_image(image, challenge_type, description):
+    """Sauvegarde une image de défi avec contexte"""
+    # Créer une image plus grande avec du contexte
+    context_img = Image.new('RGB', (800, 400), 'white')
+    
+    # Centrer l'image de défi
+    img_width, img_height = image.size
+    x = (800 - img_width) // 2
+    y = (400 - img_height) // 2
+    context_img.paste(image, (x, y))
+    
+    # Ajouter du texte descriptif
+    draw = ImageDraw.Draw(context_img)
+    try:
+        title_font = ImageFont.truetype("arial.ttf", 24)
+        desc_font = ImageFont.truetype("arial.ttf", 16)
+    except:
+        title_font = ImageFont.load_default()
+        desc_font = ImageFont.load_default()
+    
+    # Titre
+    title = f"Test de Prétraitement: {challenge_type.replace('_', ' ').title()}"
+    title_bbox = draw.textbbox((0, 0), title, font=title_font)
+    title_width = title_bbox[2] - title_bbox[0]
+    draw.text(((800 - title_width) // 2, 30), title, fill='darkred', font=title_font)
+    
+    # Description
+    desc_bbox = draw.textbbox((0, 0), description, font=desc_font)
+    desc_width = desc_bbox[2] - desc_bbox[0]
+    draw.text(((800 - desc_width) // 2, 60), description, fill='gray', font=desc_font)
+    
+    # Note technique
+    tech_note = "Code: 3760123456789 | Test système Google Lens"
+    note_bbox = draw.textbbox((0, 0), tech_note, font=desc_font)
+    note_width = note_bbox[2] - note_bbox[0]
+    draw.text(((800 - note_width) // 2, 350), tech_note, fill='blue', font=desc_font)
+    
+    # Sauvegarder
+    filename = f"test_challenge_{challenge_type}.png"
+    context_img.save(filename)
+    print(f"    ✓ Sauvegardé: {filename}")
 
 if __name__ == "__main__":
     try:
