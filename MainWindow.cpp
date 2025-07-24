@@ -5,6 +5,17 @@
 #include <QStatusBar>
 #include <cmath>
 
+#ifdef QT_ONLY_IMAGE_PROCESSING
+// Utilisation de Qt uniquement pour le traitement d'images
+#include <QImageReader>
+#include <QBuffer>
+#include <QTimer>
+#define OPENCV_AVAILABLE false
+#else
+// OpenCV disponible
+#define OPENCV_AVAILABLE true
+#endif
+
 int MainWindow::tabCounter = 1;
 
 MainWindow::MainWindow(QWidget* parent)

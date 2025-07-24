@@ -58,29 +58,20 @@ CONFIG(release, debug|release) {
 # Avertissements
 QMAKE_CXXFLAGS += -Wall -Wextra
 
-# OpenCV
+# OpenCV et ZXing
 win32 {
-    # Ajustez le chemin selon votre installation OpenCV
-    OPENCV_PATH = C:/opencv/build
-    INCLUDEPATH += $$OPENCV_PATH/include
+    # Configuration simplifiée pour Windows - Qt uniquement
+    # Si ZXing est disponible, décommentez les lignes suivantes :
+    # ZXING_PATH = C:/vcpkg/installed/x64-windows
+    # INCLUDEPATH += $$ZXING_PATH/include
+    # LIBS += -L$$ZXING_PATH/lib -lZXing
     
-    CONFIG(debug, debug|release) {
-        LIBS += -L$$OPENCV_PATH/x64/vc16/lib \
-                -lopencv_core4d \
-                -lopencv_imgproc4d \
-                -lopencv_imgcodecs4d \
-                -lopencv_videoio4d
-    } else {
-        LIBS += -L$$OPENCV_PATH/x64/vc16/lib \
-                -lopencv_core4 \
-                -lopencv_imgproc4 \
-                -lopencv_imgcodecs4 \
-                -lopencv_videoio4
-    }
+    # Sinon, utilisation de Qt uniquement pour le traitement d'images
+    DEFINES += QT_ONLY_IMAGE_PROCESSING
 }
 
 unix {
-    # Pour Linux/Mac avec OpenCV install� via package manager
+    # Pour Linux/Mac avec OpenCV installé via package manager
     LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio -lZXing
     INCLUDEPATH += /usr/include/opencv4
 }
