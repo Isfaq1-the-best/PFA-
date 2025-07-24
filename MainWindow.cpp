@@ -302,8 +302,7 @@ void MainWindow::setupConnections()
 
     connect(deleteImageButton, &QPushButton::clicked, this, [this]() {
         currentImage = QImage();
-        imagePreview->clear();
-        imagePreview->setText("Aucune image chargée\n\nUtilisez le bouton 'Importer' pour charger une image");
+        imagePreview->clearImage();
         imagePreview->setVisible(false);
         analyzeImageButton->setVisible(false);
         deleteImageButton->setVisible(false);
@@ -348,8 +347,11 @@ void MainWindow::importImage()
         return;
     }
 
-    // Afficher l'image originale
-    imagePreview->setPixmap(QPixmap::fromImage(image).scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    // Détecter automatiquement la région du code-barre
+    QRect barcodeRegion = detectBarcodeRegion(image);
+    
+    // Afficher l'image avec détection visuelle Google Lens
+    imagePreview->setImageWithBarcode(image, barcodeRegion);
     imagePreview->setVisible(true);
 
     // Afficher les nouveaux contrôles
@@ -361,10 +363,16 @@ void MainWindow::importImage()
     // Stocker l'image importée pour réutilisation
     currentImage = image;
 
-    analysisStatusLabel->setText(QString("Image chargée (%1x%2) - Cliquez sur 'Analyser' pour détecter le code-barre")
-        .arg(image.width()).arg(image.height()));
-
-    qDebug() << "Image importée - prête pour l'analyse automatique";
+    // Message informatif selon la détection
+    if (!barcodeRegion.isEmpty()) {
+        analysisStatusLabel->setText(QString("🎯 Région de code-barre détectée (%1x%2) - Cliquez sur 'Analyser' pour décoder")
+            .arg(barcodeRegion.width()).arg(barcodeRegion.height()));
+        qDebug() << "🎯 Région de code-barre détectée automatiquement:" << barcodeRegion;
+    } else {
+        analysisStatusLabel->setText(QString("📷 Image chargée (%1x%2) - Cliquez sur 'Analyser' pour détecter le code-barre")
+            .arg(image.width()).arg(image.height()));
+        qDebug() << "📷 Image importée - détection automatique de région non concluante";
+    }
 }
 
 void MainWindow::startScanner()
@@ -546,23 +554,22 @@ QString MainWindow::getFrameStyle() const
 
 void MainWindow::setupImageProcessingView()
 {
-    // Zone d'aperçu de l'image
-    imagePreview = new QLabel();
+    // Zone d'aperçu de l'image avec détection Google Lens
+    imagePreview = new BarcodeImageWidget();
     imagePreview->setMinimumSize(400, 300);
     imagePreview->setMaximumSize(600, 450);
-    imagePreview->setStyleSheet(
-        "QLabel {"
-        "border: 2px dashed #2E86AB;"
-        "border-radius: 8px;"
-        "background-color: #f8f9fa;"
-        "color: #666;"
-        "font-size: 14px;"
-        "}"
-    );
-    imagePreview->setAlignment(Qt::AlignCenter);
-    imagePreview->setScaledContents(false);
-    imagePreview->setText("Aucune image chargée\n\nUtilisez le bouton 'Importer' pour charger une image");
     imagePreview->setVisible(false);
+    
+    // Connecter les signaux du widget d'image
+    connect(imagePreview, &BarcodeImageWidget::barcodeClicked, this, [this](const QRect& rect) {
+        qDebug() << "🎯 Code-barre cliqué à la position:" << rect;
+        // Optionnel : actions supplémentaires quand on clique sur le code-barre
+    });
+    
+    connect(imagePreview, &BarcodeImageWidget::imageClicked, this, [this](const QPoint& pos) {
+        qDebug() << "📷 Image cliquée à la position:" << pos;
+        // Optionnel : actions supplémentaires quand on clique sur l'image
+    });
 
     // Nouveau bouton d'analyse automatique
     analyzeImageButton = new QPushButton("🔍 Analyser le Code-Barre");
@@ -856,8 +863,14 @@ void MainWindow::processImageAutomatically()
     // Afficher la barre de progression et le statut
     imageProgressBar->setVisible(true);
     imageProgressBar->setValue(0);
-    analysisStatusLabel->setText("Analyse en cours...");
+    analysisStatusLabel->setText("🔍 Préparation de l'analyse...");
     analyzeImageButton->setEnabled(false);
+
+    // Activer le mode analyse avec animations Google Lens
+    imagePreview->setAnalysisMode(true);
+
+    // Connecter le progress au widget d'image
+    connect(this, &MainWindow::analysisProgressUpdate, imagePreview, &BarcodeImageWidget::onAnalysisProgress);
 
     // Démarrer l'analyse
     analyzeImageWithMultipleTechniques(currentImage);
@@ -870,6 +883,7 @@ void MainWindow::analyzeImageWithMultipleTechniques(const QImage& image)
     // Phase 1: Prétraitement avancé style Google Lens
     imageProgressBar->setValue(5);
     analysisStatusLabel->setText("🔍 Prétraitement intelligent de l'image...");
+    emit analysisProgressUpdate(5, "🔍 Prétraitement intelligent de l'image...");
     QApplication::processEvents();
     
     QImage preprocessedImage = preprocessImageAdvanced(image);
@@ -983,14 +997,29 @@ void MainWindow::analyzeImageWithMultipleTechniques(const QImage& image)
 
     // Finalisation
     imageProgressBar->setValue(100);
+    emit analysisProgressUpdate(100, "✅ Analyse terminée");
     analyzeImageButton->setEnabled(true);
+
+    // Arrêter le mode analyse
+    imagePreview->setAnalysisMode(false);
 
     if (!detectedCodes.isEmpty()) {
         analysisStatusLabel->setText("✅ Code-barre détecté avec succès !");
+        
+        // Afficher le résultat avec cadre Google Lens
+        QRect detectedRegion = detectBarcodeRegion(image);
+        imagePreview->showBarcodeDetection(detectedRegion, detectedCodes.first(), true);
+        
         qDebug() << "Codes détectés:" << detectedCodes;
     } else {
         analysisStatusLabel->setText("❌ Aucun code-barre EAN-13 détecté");
+        
+        // Cacher le cadre de détection
+        imagePreview->hideBarcodeDetection();
     }
+
+    // Déconnecter le signal de progression
+    disconnect(this, &MainWindow::analysisProgressUpdate, imagePreview, &BarcodeImageWidget::onAnalysisProgress);
 
     // Traitement des résultats
     onImageProcessingFinished(detectedCodes.isEmpty() ? QString() : detectedCodes.first(), !detectedCodes.isEmpty());
@@ -1725,4 +1754,227 @@ QImage MainWindow::morphologyClose(const QImage& image)
     }
     
     return result;
+}
+
+QRect MainWindow::detectBarcodeRegion(const QImage& image)
+{
+    if (image.isNull()) return QRect();
+    
+    qDebug() << "🔍 Détection automatique de la région du code-barre...";
+    
+    // Convertir en niveaux de gris pour l'analyse
+    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
+    
+    // Paramètres de détection
+    const int minBarcodeWidth = 50;
+    const int minBarcodeHeight = 20;
+    const int maxBarcodeWidth = image.width() * 0.8;
+    const int maxBarcodeHeight = image.height() * 0.3;
+    
+    // Variables pour la meilleure région trouvée
+    QRect bestRegion;
+    double bestScore = 0;
+    
+    // Scanner l'image par blocs pour détecter les patterns de code-barre
+    int blockWidth = 60;
+    int blockHeight = 40;
+    
+    for (int y = 0; y <= image.height() - blockHeight; y += 10) {
+        for (int x = 0; x <= image.width() - blockWidth; x += 10) {
+            QRect currentRegion(x, y, blockWidth, blockHeight);
+            
+            // Analyser ce bloc pour détecter un pattern de code-barre
+            double score = analyzeBarcodePattern(grayImage, currentRegion);
+            
+            if (score > bestScore && 
+                currentRegion.width() >= minBarcodeWidth && 
+                currentRegion.height() >= minBarcodeHeight &&
+                currentRegion.width() <= maxBarcodeWidth && 
+                currentRegion.height() <= maxBarcodeHeight) {
+                bestScore = score;
+                bestRegion = currentRegion;
+            }
+        }
+    }
+    
+    // Si une région prometteuse a été trouvée, l'étendre pour capturer tout le code-barre
+    if (bestScore > 0.3) { // Seuil de confiance
+        bestRegion = expandBarcodeRegion(grayImage, bestRegion);
+        qDebug() << "✅ Région de code-barre détectée avec score:" << bestScore << "région:" << bestRegion;
+    } else {
+        qDebug() << "❌ Aucune région de code-barre trouvée (meilleur score:" << bestScore << ")";
+    }
+    
+    return bestRegion;
+}
+
+double MainWindow::analyzeBarcodePattern(const QImage& grayImage, const QRect& region)
+{
+    if (region.isEmpty() || !grayImage.rect().contains(region)) {
+        return 0.0;
+    }
+    
+    double totalTransitions = 0;
+    int scanLines = 5; // Nombre de lignes à analyser
+    
+    // Analyser plusieurs lignes horizontales dans la région
+    for (int i = 0; i < scanLines; ++i) {
+        int y = region.top() + (region.height() * i) / scanLines;
+        if (y >= grayImage.height()) continue;
+        
+        int transitions = 0;
+        int lastGray = qGray(grayImage.pixel(region.left(), y));
+        
+        // Compter les transitions noir/blanc
+        for (int x = region.left() + 1; x < region.right(); ++x) {
+            if (x >= grayImage.width()) break;
+            
+            int currentGray = qGray(grayImage.pixel(x, y));
+            
+            // Transition détectée si différence significative
+            if (qAbs(currentGray - lastGray) > 50) {
+                transitions++;
+            }
+            lastGray = currentGray;
+        }
+        
+        totalTransitions += transitions;
+    }
+    
+    // Calculer le score basé sur le nombre de transitions
+    // Les codes-barres ont typiquement 10-30 transitions par ligne
+    double avgTransitions = totalTransitions / scanLines;
+    double score = 0.0;
+    
+    if (avgTransitions >= 8 && avgTransitions <= 40) {
+        // Score élevé pour le nombre optimal de transitions
+        score = qMin(1.0, avgTransitions / 25.0);
+        
+        // Bonus si les transitions sont régulières
+        score *= calculateTransitionRegularity(grayImage, region);
+    }
+    
+    return score;
+}
+
+double MainWindow::calculateTransitionRegularity(const QImage& grayImage, const QRect& region)
+{
+    // Analyser la régularité des transitions (caractéristique des codes-barres)
+    int middleY = region.center().y();
+    if (middleY >= grayImage.height()) return 0.0;
+    
+    QVector<int> transitionPositions;
+    int lastGray = qGray(grayImage.pixel(region.left(), middleY));
+    
+    for (int x = region.left() + 1; x < region.right(); ++x) {
+        if (x >= grayImage.width()) break;
+        
+        int currentGray = qGray(grayImage.pixel(x, middleY));
+        if (qAbs(currentGray - lastGray) > 50) {
+            transitionPositions.append(x);
+        }
+        lastGray = currentGray;
+    }
+    
+    if (transitionPositions.size() < 4) return 0.0;
+    
+    // Calculer la variance des distances entre transitions
+    QVector<int> distances;
+    for (int i = 1; i < transitionPositions.size(); ++i) {
+        distances.append(transitionPositions[i] - transitionPositions[i-1]);
+    }
+    
+    // Les codes-barres ont des distances relativement régulières
+    if (distances.isEmpty()) return 0.0;
+    
+    double avgDistance = 0;
+    for (int dist : distances) {
+        avgDistance += dist;
+    }
+    avgDistance /= distances.size();
+    
+    double variance = 0;
+    for (int dist : distances) {
+        variance += (dist - avgDistance) * (dist - avgDistance);
+    }
+    variance /= distances.size();
+    
+    // Score de régularité (inverse de la variance normalisée)
+    double regularity = 1.0 / (1.0 + variance / (avgDistance * avgDistance));
+    
+    return regularity;
+}
+
+QRect MainWindow::expandBarcodeRegion(const QImage& grayImage, const QRect& initialRegion)
+{
+    if (initialRegion.isEmpty()) return QRect();
+    
+    // Étendre la région pour capturer tout le code-barre
+    int left = initialRegion.left();
+    int right = initialRegion.right();
+    int top = initialRegion.top();
+    int bottom = initialRegion.bottom();
+    
+    // Étendre horizontalement (plus important pour les codes-barres)
+    while (left > 0 && hasVerticalTransitions(grayImage, left - 1, top, bottom)) {
+        left--;
+    }
+    
+    while (right < grayImage.width() - 1 && hasVerticalTransitions(grayImage, right + 1, top, bottom)) {
+        right++;
+    }
+    
+    // Étendre verticalement mais modérément
+    while (top > 0 && hasHorizontalTransitions(grayImage, left, right, top - 1)) {
+        top--;
+    }
+    
+    while (bottom < grayImage.height() - 1 && hasHorizontalTransitions(grayImage, left, right, bottom + 1)) {
+        bottom++;
+    }
+    
+    // Ajouter une petite marge
+    int margin = 5;
+    left = qMax(0, left - margin);
+    top = qMax(0, top - margin);
+    right = qMin(grayImage.width() - 1, right + margin);
+    bottom = qMin(grayImage.height() - 1, bottom + margin);
+    
+    return QRect(left, top, right - left, bottom - top);
+}
+
+bool MainWindow::hasVerticalTransitions(const QImage& grayImage, int x, int top, int bottom)
+{
+    if (x < 0 || x >= grayImage.width()) return false;
+    
+    int transitions = 0;
+    int lastGray = qGray(grayImage.pixel(x, top));
+    
+    for (int y = top + 1; y <= bottom && y < grayImage.height(); ++y) {
+        int currentGray = qGray(grayImage.pixel(x, y));
+        if (qAbs(currentGray - lastGray) > 50) {
+            transitions++;
+        }
+        lastGray = currentGray;
+    }
+    
+    return transitions >= 2; // Au moins quelques transitions
+}
+
+bool MainWindow::hasHorizontalTransitions(const QImage& grayImage, int left, int right, int y)
+{
+    if (y < 0 || y >= grayImage.height()) return false;
+    
+    int transitions = 0;
+    int lastGray = qGray(grayImage.pixel(left, y));
+    
+    for (int x = left + 1; x <= right && x < grayImage.width(); ++x) {
+        int currentGray = qGray(grayImage.pixel(x, y));
+        if (qAbs(currentGray - lastGray) > 50) {
+            transitions++;
+        }
+        lastGray = currentGray;
+    }
+    
+    return transitions >= 4; // Les codes-barres ont plusieurs transitions horizontales
 }

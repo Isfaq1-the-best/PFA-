@@ -30,6 +30,7 @@
 #include "DatabaseManager.h"
 #include "CameraWidget.h"
 #include "ThemeManager.h"
+#include "BarcodeImageWidget.h"
 
 class MainWindow : public QMainWindow
 {
@@ -50,6 +51,9 @@ private slots:
     void onBarcodeValidated(const QString& barcode, bool isValid);
     void onImageProcessingFinished(const QString& barcode, bool success);
     void onImageProcessingProgress(int percentage);
+
+signals:
+    void analysisProgressUpdate(int percentage, const QString& status);
 
 private:
     // UI Components
@@ -94,7 +98,7 @@ private:
 
     // Image processing
     QImage currentImage;
-    QLabel* imagePreview;
+    BarcodeImageWidget* imagePreview;
     QPushButton* analyzeImageButton;
     QPushButton* deleteImageButton;
     QLabel* analysisStatusLabel;
@@ -137,6 +141,14 @@ private:
     QImage unsharpMask(const QImage& image, double amount = 1.5);
     QImage clahe(const QImage& image); // Contrast Limited Adaptive Histogram Equalization
     double calculateHorizontalLineScore(const QImage& image);
+    QRect detectBarcodeRegion(const QImage& image); // Détection de la région du code-barre
+    
+    // Méthodes auxiliaires pour la détection de région
+    double analyzeBarcodePattern(const QImage& grayImage, const QRect& region);
+    double calculateTransitionRegularity(const QImage& grayImage, const QRect& region);
+    QRect expandBarcodeRegion(const QImage& grayImage, const QRect& initialRegion);
+    bool hasVerticalTransitions(const QImage& grayImage, int x, int top, int bottom);
+    bool hasHorizontalTransitions(const QImage& grayImage, int left, int right, int y);
 };
 
 #endif // MAINWINDOW_H

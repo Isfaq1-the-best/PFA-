@@ -20,7 +20,8 @@ SOURCES += \
     BarcodeValidator.cpp \
     DatabaseManager.cpp \
     CameraWidget.cpp \
-    ThemeManager.cpp
+    ThemeManager.cpp \
+    BarcodeImageWidget.cpp
 
 # Headers
 HEADERS += \
@@ -29,7 +30,8 @@ HEADERS += \
     BarcodeValidator.h \
     DatabaseManager.h \
     CameraWidget.h \
-    ThemeManager.h
+    ThemeManager.h \
+    BarcodeImageWidget.h
 
 # Ressources (si vous avez des ic�nes)
 # RESOURCES += resources.qrc
