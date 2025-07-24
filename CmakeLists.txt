@@ -1,0 +1,219 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(EPOBarcodeValidator VERSION 1.0.0 LANGUAGES CXX)
+
+# Configuration C++
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Configuration pour Visual Studio
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+    
+    # Support UTF-8
+    add_compile_options(/utf-8)
+    
+    # Définir WIN32_LEAN_AND_MEAN pour éviter les conflits
+    add_definitions(-DWIN32_LEAN_AND_MEAN)
+    add_definitions(-DNOMINMAX)
+endif()
+
+# Configuration Qt
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# Trouver Qt6 - Configuration pour Qt VS Tools
+find_package(Qt6 REQUIRED COMPONENTS 
+    Core 
+    Widgets 
+    Gui 
+    Sql 
+    Network 
+)
+
+# Trouver OpenCV
+find_package(OpenCV REQUIRED)
+
+# ZXing (optionnel - pour une meilleure détection de codes-barres)
+# find_package(ZXing QUIET)
+# if(ZXing_FOUND)
+#     message(STATUS "ZXing trouvé: ${ZXing_VERSION}")
+#     add_definitions(-DUSE_ZXING)
+# else()
+#     message(STATUS "ZXing non trouvé - utilisation d'OpenCV uniquement")
+# endif()
+
+# Vérifier que Qt a été trouvé
+if(NOT Qt6_FOUND)
+    message(FATAL_ERROR "Qt6 non trouvé. Assurez-vous que Qt VS Tools est correctement configuré.")
+endif()
+
+# Vérifier qu'OpenCV a été trouvé
+if(NOT OpenCV_FOUND)
+    message(FATAL_ERROR "OpenCV non trouvé. Installez OpenCV et configurez OpenCV_DIR.")
+endif()
+
+# Afficher les informations Qt pour debug
+message(STATUS "Qt6 trouvé: ${Qt6_VERSION}")
+message(STATUS "Qt6 Directory: ${Qt6_DIR}")
+message(STATUS "OpenCV trouvé: ${OpenCV_VERSION}")
+message(STATUS "OpenCV Directory: ${OpenCV_DIR}")
+
+# Définir les fichiers sources
+set(SOURCES
+    main.cpp
+    SplashWindow.cpp
+    MainWindow.cpp
+    BarcodeValidator.cpp
+    DatabaseManager.cpp
+    CameraWidget.cpp
+    ThemeManager.cpp
+)
+
+set(HEADERS
+    SplashWindow.h
+    MainWindow.h
+    BarcodeValidator.h
+    DatabaseManager.h
+    CameraWidget.h
+    ThemeManager.h
+)
+
+# Fichiers de ressources (optionnel)
+set(RESOURCES
+    # resources.qrc
+)
+
+# Créer l'exécutable Windows
+add_executable(EPOBarcodeValidator WIN32 ${SOURCES} ${HEADERS} ${RESOURCES})
+
+# Propriétés spécifiques à Windows
+set_target_properties(EPOBarcodeValidator PROPERTIES
+    WIN32_EXECUTABLE TRUE
+    OUTPUT_NAME "EPOBarcodeValidator"
+    DEBUG_POSTFIX "_d"
+)
+
+# Lier les bibliothèques Qt
+target_link_libraries(EPOBarcodeValidator
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Gui
+    Qt6::Sql
+    Qt6::Network
+    ${OpenCV_LIBS}
+    # ${ZXing_LIBRARIES}  # Décommentez si ZXing est installé
+)
+
+# Répertoires d'inclusion
+target_include_directories(EPOBarcodeValidator PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${Qt6Core_INCLUDE_DIRS}
+    ${Qt6Widgets_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
+    ${Qt6Sql_INCLUDE_DIRS}
+    ${Qt6Network_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+)
+
+# Définitions de compilation
+target_compile_definitions(EPOBarcodeValidator PRIVATE
+    QT_WIDGETS_LIB
+    QT_GUI_LIB
+    QT_CORE_LIB
+    QT_SQL_LIB
+    QT_NETWORK_LIB
+)
+
+# Configuration Debug/Release
+target_compile_definitions(EPOBarcodeValidator PRIVATE
+    $<$<CONFIG:Debug>:QT_QML_DEBUG>
+    $<$<CONFIG:Release>:QT_NO_DEBUG_OUTPUT>
+)
+
+# Déploiement automatique des DLLs Qt (windeployqt)
+if(WIN32)
+    # Trouver windeployqt
+    get_target_property(QT6_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
+    get_filename_component(QT6_WINDEPLOYQT_EXECUTABLE ${QT6_QMAKE_EXECUTABLE} PATH)
+    set(QT6_WINDEPLOYQT_EXECUTABLE "${QT6_WINDEPLOYQT_EXECUTABLE}/windeployqt.exe")
+
+    if(EXISTS ${QT6_WINDEPLOYQT_EXECUTABLE})
+        # Commande post-build pour déployer les DLLs Qt
+        add_custom_command(TARGET EPOBarcodeValidator POST_BUILD
+            COMMAND ${QT6_WINDEPLOYQT_EXECUTABLE} 
+                --verbose 2
+                --no-translations
+                --no-system-d3d-compiler
+                --no-opengl-sw
+                $<TARGET_FILE:EPOBarcodeValidator>
+            COMMENT "Déploiement des bibliothèques Qt"
+        )
+        message(STATUS "windeployqt trouvé: ${QT6_WINDEPLOYQT_EXECUTABLE}")
+    else()
+        message(WARNING "windeployqt non trouvé. Les DLLs Qt devront être copiées manuellement.")
+    endif()
+endif()
+
+# Configuration pour différents générateurs Visual Studio
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    # Définir le projet de démarrage
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EPOBarcodeValidator)
+    
+    # Organiser les fichiers dans l'explorateur de solutions
+    source_group("Header Files" FILES ${HEADERS})
+    source_group("Source Files" FILES ${SOURCES})
+    if(RESOURCES)
+        source_group("Resource Files" FILES ${RESOURCES})
+    endif()
+    
+    # Configuration des répertoires de sortie
+    set_target_properties(EPOBarcodeValidator PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
+        RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/RelWithDebInfo"
+        RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/MinSizeRel"
+    )
+endif()
+
+# Installation
+install(TARGETS EPOBarcodeValidator
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+# Installer les DLLs Qt nécessaires
+if(WIN32)
+    install(CODE "
+        include(BundleUtilities)
+        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/bin/EPOBarcodeValidator.exe\" \"\" \"\")
+    ")
+endif()
+
+# Informations de build
+message(STATUS "=== Configuration EPO Barcode Validator ===")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Compilateur: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "Standard C++: ${CMAKE_CXX_STANDARD}")
+message(STATUS "Type de build: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Générateur: ${CMAKE_GENERATOR}")
+message(STATUS "==========================================")
+
+# Cibles personnalisées pour le développement
+add_custom_target(run
+    COMMAND EPOBarcodeValidator
+    DEPENDS EPOBarcodeValidator
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Lancement de l'application"
+)
+
+add_custom_target(clean-all
+    COMMAND ${CMAKE_COMMAND} --build . --target clean
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Debug
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Release
+    COMMENT "Nettoyage complet"
+)
