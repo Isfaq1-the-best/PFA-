@@ -1,8 +1,9 @@
-﻿#include "MainWindow.h"
+#include "MainWindow.h"
 #include <QApplication>
 #include <QHeaderView>
 #include <QSplitter>
 #include <QStatusBar>
+#include "GoogleVisionHelper.h"
 
 int MainWindow::tabCounter = 1;
 
@@ -367,8 +368,23 @@ void MainWindow::setupConnections()
 
         // 4. Vérification de la validité exactement comme votre code
         if (!result.isValid()) {
-            qDebug() << "Aucun code-barres détecté.";
-            QMessageBox::information(this, "Résultat", "Aucun code-barres détecté.");
+            qDebug() << "Aucun code-barres détecté par ZXing. Tentative via Google Vision...";
+            // Appel Google Vision API
+            QString apiKey = "VOTRE_CLE_API"; // Remplacez par votre clé
+            QString code = GoogleVisionHelper::detectBarcodeWithGoogleVision(currentImage, apiKey);
+            if (!code.isEmpty()) {
+                QMessageBox::information(this, "Code-barres détecté (Google Vision)", "Code : " + code);
+                // Vérification clé de contrôle
+                if (code.length() == 13) {
+                    QString cleCalculee = calculerCleChiffrement(code.left(12));
+                    int cleBarcode = code.right(1).toInt();
+                    bool isValid = (cleCalculee.toInt() == cleBarcode);
+                    databaseManager->saveBarcodeToDatabase(code, "Import (Google Vision)", isValid);
+                    statusLabel->setText(QString("Code-barre %1: %2 (Google Vision)").arg(isValid ? "validé" : "invalide", code));
+                }
+            } else {
+                QMessageBox::information(this, "Résultat", "Aucun code-barres détecté.");
+            }
             return;
         }
 
@@ -414,7 +430,7 @@ void MainWindow::setupConnections()
         // 10. Affichage final
         QMessageBox::information(this, "Code-barres détecté", "Code : " + brut);
         statusLabel->setText(QString("Code-barre %1: %2").arg(isValid ? "validé" : "invalide", brut));
-        });
+    });
 
     connect(deleteImageButton, &QPushButton::clicked, this, [this]() {
         currentImage = QImage();
