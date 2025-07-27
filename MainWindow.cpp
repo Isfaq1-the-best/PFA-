@@ -1,8 +1,10 @@
-﻿#include "MainWindow.h"
+#include "MainWindow.h"
 #include <QApplication>
 #include <QHeaderView>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QDesktopServices>
+#include <QUrl>
 
 int MainWindow::tabCounter = 1;
 
@@ -131,8 +133,7 @@ void MainWindow::setupStackedWidget()
     mainViewLayout->addWidget(imagePreview);
 
     QHBoxLayout* imageButtonsLayout = new QHBoxLayout();
-    imageButtonsLayout->addWidget(convertButton);
-    imageButtonsLayout->addWidget(decodeButton);
+    imageButtonsLayout->addWidget(googleLensResultButton);
     imageButtonsLayout->addWidget(deleteImageButton);
     imageButtonsLayout->addStretch();
     mainViewLayout->addLayout(imageButtonsLayout);
@@ -193,7 +194,7 @@ void MainWindow::setupFAQView()
     faqText->setHtml(
         "<h3>Comment utiliser l'application ?</h3>"
         "<p><b>Images fournies par l'utilisateur :</b> L'application traite les images et codes-barres que vous importez ou scannez.</p>"
-        "<p><b>Importer :</b> Permet d'importer des images (JPEG, JPG, PNG) contenant des codes-barres.</p>"
+        "<p><b>Importer :</b> Permet d'importer des images (JPEG, JPG, PNG) et redirige automatiquement vers Google Lens pour l'analyse des codes-barres.</p>"
         "<p><b>Scanner :</b> Utilise la caméra ou une connexion IP pour scanner en temps réel.</p>"
         "<p><b>Saisie Manuelle :</b> Permet de saisir directement un code-barre.</p>"
         "<p><b>Historique :</b> Affiche tous les codes-barres validés et enregistrés.</p>"
@@ -209,6 +210,18 @@ void MainWindow::setupFAQView()
         "<h3>Validation des codes-barres</h3>"
         "<p>L'application vérifie automatiquement la clé de chiffrement du code-barre en utilisant "
         "les 12 premiers chiffres pour calculer la clé de contrôle et la compare avec le 13ème chiffre.</p>"
+        "<br>"
+        "<h3>Utilisation de Google Lens</h3>"
+        "<p>Lorsque vous importez une image :</p>"
+        "<ol>"
+        "<li>L'application ouvre automatiquement Google Lens dans votre navigateur</li>"
+        "<li>Cliquez sur l'icône d'appareil photo dans Google Lens</li>"
+        "<li>Sélectionnez l'image que vous venez d'importer</li>"
+        "<li>Google Lens analysera le code-barre et affichera les chiffres</li>"
+        "<li>Copiez les chiffres détectés</li>"
+        "<li>Revenez dans cette application et utilisez 'Saisie Manuelle' pour coller les chiffres</li>"
+        "<li>L'application vérifiera automatiquement la clé de chiffrement</li>"
+        "</ol>"
         "<br>"
         "<h3>Configuration caméra IP</h3>"
         "<p>Pour utiliser votre smartphone comme caméra :</p>"
@@ -284,145 +297,14 @@ void MainWindow::setupConnections()
         this, &MainWindow::onBarcodeValidated);
 
     // Connexions pour le traitement d'images
-    connect(convertButton, &QPushButton::clicked, this, [this]() {
-        if (currentImage.isNull()) {
-            QMessageBox::warning(this, "Erreur", "Aucune image chargée.");
-            return;
-        }
-
-        // 1. Convertir en RGB888 si nécessaire
-        QImage processedImage = currentImage;
-        if (processedImage.format() != QImage::Format_RGB888) {
-            processedImage = processedImage.convertToFormat(QImage::Format_RGB888);
-        }
-
-        // 2. Redimensionner si trop petit
-        if (processedImage.width() < 500 || processedImage.height() < 500) {
-            processedImage = processedImage.scaled(800, 600, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        }
-
-        // 3. Convertir en niveaux de gris
-        QImage grayImage(processedImage.size(), QImage::Format_Grayscale8);
-        for (int y = 0; y < processedImage.height(); ++y) {
-            const uchar* rgbLine = processedImage.constScanLine(y);
-            uchar* grayLine = grayImage.scanLine(y);
-
-            for (int x = 0; x < processedImage.width(); ++x) {
-                int r = rgbLine[x * 3];
-                int g = rgbLine[x * 3 + 1];
-                int b = rgbLine[x * 3 + 2];
-                int gray = static_cast<int>(0.3 * r + 0.59 * g + 0.11 * b);
-                grayLine[x] = static_cast<uchar>(gray);
-            }
-        }
-
-        // 4. Mettre à jour l'image courante
-        currentImage = grayImage;
-        qDebug() << "Image convertie : taille =" << currentImage.size() << ", format =" << currentImage.format();
-
-        // 5. Afficher l'image convertie
-        imagePreview->setPixmap(QPixmap::fromImage(currentImage).scaled(
-            imagePreview->size(),
-            Qt::KeepAspectRatio,
-            Qt::SmoothTransformation
-        ));
-
-        QMessageBox::information(this, "Conversion", "Image prétraitée pour la détection du code-barres.");
-        });
-
-    connect(decodeButton, &QPushButton::clicked, this, [this]() {
-        if (currentImage.isNull()) {
-            QMessageBox::warning(this, "Attention", "Aucune image chargée.");
-            return;
-        }
-
-        // 1. Vérification et conversion exactement comme votre code
-        QImage imageForZXing = currentImage;
-        if (imageForZXing.format() != QImage::Format_RGB888) {
-            qDebug() << "Conversion en RGB888...";
-            imageForZXing = imageForZXing.convertToFormat(QImage::Format_RGB888);
-        }
-
-        if (imageForZXing.isNull()) {
-            QMessageBox::critical(this, "Erreur", "L'image à décoder est invalide.");
-            return;
-        }
-
-        qDebug() << "Décodage image : taille =" << imageForZXing.size() << ", format =" << imageForZXing.format();
-
-        // 2. Configuration ZXing exactement comme votre code
-        ZXing::ImageView zxingImage(
-            imageForZXing.constBits(),
-            imageForZXing.width(),
-            imageForZXing.height(),
-            ZXing::ImageFormat::RGB
-        );
-
-        ZXing::ReaderOptions options;
-        options.setTryHarder(true);
-        options.setFormats({ ZXing::BarcodeFormat::EAN13 });
-
-        // 3. Lecture du code-barres
-        ZXing::Result result = ZXing::ReadBarcode(zxingImage, options);
-
-        // 4. Vérification de la validité exactement comme votre code
-        if (!result.isValid()) {
-            qDebug() << "Aucun code-barres détecté.";
-            QMessageBox::information(this, "Résultat", "Aucun code-barres détecté.");
-            return;
-        }
-
-        // 5. Informations de débogage
-        QString brut = QString::fromStdString(result.text());
-        ZXing::BarcodeFormat format = result.format();
-
-        qDebug() << "Format détecté :" << QString::fromStdString(ZXing::ToString(format));
-        qDebug() << "Texte brut détecté :" << brut << ", longueur =" << brut.length();
-
-        if (brut.trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Erreur", "Un code-barres a été détecté, mais le texte est vide.");
-            return;
-        }
-
-        // 6. Nettoyage du texte (garder uniquement les chiffres)
-        static const QRegularExpression nonDigitRegex("[^0-9]");
-        brut = brut.remove(nonDigitRegex);
-
-        qDebug() << "Code nettoyé =" << brut << ", longueur =" << brut.length();
-
-        // 7. Vérification longueur EAN13
-        if (brut.length() != 13) {
-            QMessageBox::warning(this, "Code-barres", "Longueur invalide : " + QString::number(brut.length()));
-            return;
-        }
-
-        // 8. Vérification clé de contrôle
-        QString cleCalculee = calculerCleChiffrement(brut.left(12));
-        int cleBarcode = brut.right(1).toInt();
-
-        // 9. Sauvegarde en base de données
-        bool isValid = (cleCalculee.toInt() == cleBarcode);
-        databaseManager->saveBarcodeToDatabase(brut, "Import", isValid);
-
-        if (isValid) {
-            QMessageBox::information(this, "Code-barres", "Code : " + brut + "\nClé correcte !");
-        }
-        else {
-            QMessageBox::warning(this, "Code-barres", "Code : " + brut + "\nClé incorrecte !");
-        }
-
-        // 10. Affichage final
-        QMessageBox::information(this, "Code-barres détecté", "Code : " + brut);
-        statusLabel->setText(QString("Code-barre %1: %2").arg(isValid ? "validé" : "invalide", brut));
-        });
+    connect(googleLensResultButton, &QPushButton::clicked, this, &MainWindow::handleGoogleLensResult);
 
     connect(deleteImageButton, &QPushButton::clicked, this, [this]() {
         currentImage = QImage();
         imagePreview->clear();
         imagePreview->setText("Aucune image chargée\n\nUtilisez le bouton 'Importer' pour charger une image");
         imagePreview->setVisible(false);
-        convertButton->setVisible(false);
-        decodeButton->setVisible(false);
+        googleLensResultButton->setVisible(false);
         deleteImageButton->setVisible(false);
         statusLabel->setText("Image supprimée");
         });
@@ -463,22 +345,57 @@ void MainWindow::importImage()
         return;
     }
 
+    // Stocker l'image importée pour réutilisation
+    currentImage = image;
+
     // Afficher l'image originale
     imagePreview->setPixmap(QPixmap::fromImage(image).scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     imagePreview->setVisible(true);
 
-    // Afficher les boutons Convertir et Décoder
-    convertButton->setVisible(true);
-    decodeButton->setVisible(true);
+    // Afficher le bouton pour gérer les résultats Google Lens
+    googleLensResultButton->setVisible(true);
     deleteImageButton->setVisible(true);
 
-    // Stocker l'image importée pour réutilisation
-    currentImage = image;
+    // Rediriger vers Google Lens pour l'analyse
+    redirectToGoogleLens(fileName);
 
-    statusLabel->setText(QString("Image chargée (%1x%2) - Utilisez 'Convertir' puis 'Décoder'")
+    statusLabel->setText(QString("Image chargée (%1x%2) - Redirection vers Google Lens...")
         .arg(image.width()).arg(image.height()));
 
-    qDebug() << "Image importée et boutons Convertir/Décoder affichés";
+    qDebug() << "Image importée et redirection vers Google Lens";
+}
+
+void MainWindow::redirectToGoogleLens(const QString& imagePath)
+{
+    // Créer une URL Google Lens avec l'image
+    QUrl googleLensUrl("https://lens.google.com/");
+    
+    // Ouvrir Google Lens dans le navigateur par défaut
+    QDesktopServices::openUrl(googleLensUrl);
+    
+    // Afficher un message à l'utilisateur
+    QMessageBox::information(this, "Redirection vers Google Lens",
+        "Google Lens s'ouvre dans votre navigateur.\n\n"
+        "Instructions :\n"
+        "1. Cliquez sur l'icône d'appareil photo dans Google Lens\n"
+        "2. Sélectionnez l'image que vous venez d'importer\n"
+        "3. Google Lens analysera le code-barre\n"
+        "4. Copiez les chiffres détectés\n"
+        "5. Revenez dans cette application et cliquez sur 'Saisie Manuelle'\n"
+        "6. Collez les chiffres pour validation\n\n"
+        "Note : L'image reste disponible dans l'application pour référence.");
+}
+
+void MainWindow::handleGoogleLensResult()
+{
+    // Cette méthode peut être utilisée pour traiter les résultats
+    // si on implémente une intégration plus avancée avec Google Lens
+    QMessageBox::information(this, "Résultat Google Lens",
+        "Pour utiliser les résultats de Google Lens :\n\n"
+        "1. Copiez les chiffres détectés par Google Lens\n"
+        "2. Cliquez sur 'Saisie Manuelle' dans cette application\n"
+        "3. Collez les chiffres dans le champ de saisie\n"
+        "4. L'application vérifiera automatiquement la clé de chiffrement");
 }
 
 void MainWindow::startScanner()
@@ -679,17 +596,11 @@ void MainWindow::setupImageProcessingView()
     imagePreview->setVisible(false);
 
     // Boutons de traitement
-    convertButton = new QPushButton("Convertir");
-    convertButton->setIcon(QIcon(":/icons/convert.png"));
-    convertButton->setFixedSize(120, 35);
-    convertButton->setToolTip("Prétraiter l'image pour améliorer la détection");
-    convertButton->setVisible(false);
-
-    decodeButton = new QPushButton("Décoder");
-    decodeButton->setIcon(QIcon(":/icons/decode.png"));
-    decodeButton->setFixedSize(120, 35);
-    decodeButton->setToolTip("Analyser l'image pour détecter le code-barre");
-    decodeButton->setVisible(false);
+    googleLensResultButton = new QPushButton("Résultat\nGoogle Lens");
+    googleLensResultButton->setIcon(QIcon(":/icons/lens.png"));
+    googleLensResultButton->setFixedSize(120, 50);
+    googleLensResultButton->setToolTip("Gérer les résultats de Google Lens");
+    googleLensResultButton->setVisible(false);
 
     deleteImageButton = new QPushButton("Supprimer");
     deleteImageButton->setIcon(QIcon(":/icons/delete.png"));
@@ -769,148 +680,14 @@ QImage MainWindow::enhanceImageForBarcode(const QImage& originalImage)
 }
 QString MainWindow::detectBarcodeFromImage(const QImage& image)
 {
-    if (image.isNull()) {
-        return QString();
-    }
-
-    // Essayer avec l'image en niveaux de gris (format Lum pour ZXing)
-    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
-
-    ZXing::ImageView zxingImage(
-        grayImage.constBits(),
-        grayImage.width(),
-        grayImage.height(),
-        ZXing::ImageFormat::Lum
-    );
-
-    ZXing::ReaderOptions options;
-    options.setTryHarder(true);
-    options.setTryRotate(true);
-    options.setFormats({ ZXing::BarcodeFormat::EAN13 });
-
-    ZXing::Result result = ZXing::ReadBarcode(zxingImage, options);
-
-    if (result.isValid() && !result.text().empty()) {
-        QString barcode = QString::fromStdString(result.text());
-        // Nettoyer le code-barre (garder seulement les chiffres)
-        static const QRegularExpression nonDigitRegex("[^0-9]");
-        barcode = barcode.remove(nonDigitRegex);
-
-        qDebug() << "Code-barre détecté (niveaux de gris):" << barcode;
-        return barcode;
-    }
-
-    // Si échec, essayer avec l'image RGB
-    QImage rgbImage = image.convertToFormat(QImage::Format_RGB888);
-
-    ZXing::ImageView zxingImageRGB(
-        rgbImage.constBits(),
-        rgbImage.width(),
-        rgbImage.height(),
-        ZXing::ImageFormat::RGB
-    );
-
-    ZXing::Result resultRGB = ZXing::ReadBarcode(zxingImageRGB, options);
-
-    if (resultRGB.isValid() && !resultRGB.text().empty()) {
-        QString barcode = QString::fromStdString(resultRGB.text());
-        // Nettoyer le code-barre (garder seulement les chiffres)
-        static const QRegularExpression nonDigitRegex("[^0-9]");
-        barcode = barcode.remove(nonDigitRegex);
-
-        qDebug() << "Code-barre détecté (RGB):" << barcode;
-        return barcode;
-    }
-
-    // Si toujours échec, essayer avec une image binarisée
-    QImage binaryImage = createBinaryImage(grayImage);
-
-    ZXing::ImageView zxingImageBinary(
-        binaryImage.constBits(),
-        binaryImage.width(),
-        binaryImage.height(),
-        ZXing::ImageFormat::Lum
-    );
-
-    ZXing::Result resultBinary = ZXing::ReadBarcode(zxingImageBinary, options);
-
-    if (resultBinary.isValid() && !resultBinary.text().empty()) {
-        QString barcode = QString::fromStdString(resultBinary.text());
-        // Nettoyer le code-barre (garder seulement les chiffres)
-        static const QRegularExpression nonDigitRegex("[^0-9]");
-        barcode = barcode.remove(nonDigitRegex);
-
-        qDebug() << "Code-barre détecté (binaire):" << barcode;
-        return barcode;
-    }
-
-    qDebug() << "Aucun code-barre détecté avec les 3 méthodes";
-    return QString();
+    // Cette fonction n'est plus utilisée car nous redirigeons vers Google Lens
+    // Retourner un message informatif
+    Q_UNUSED(image)
+    return QString("Utilisez Google Lens pour analyser le code-barre");
 }
 QImage MainWindow::createBinaryImage(const QImage& grayImage)
 {
-    if (grayImage.isNull()) {
-        return QImage();
-    }
-
-    // Calculer le seuil automatiquement (méthode d'Otsu simplifiée)
-    int histogram[256] = { 0 };
-    int totalPixels = grayImage.width() * grayImage.height();
-
-    // Construire l'histogramme
-    for (int y = 0; y < grayImage.height(); ++y) {
-        const uchar* line = grayImage.constScanLine(y);
-        for (int x = 0; x < grayImage.width(); ++x) {
-            histogram[line[x]]++;
-        }
-    }
-
-    // Trouver le seuil optimal (version simplifiée)
-    int sum = 0;
-    for (int i = 0; i < 256; ++i) {
-        sum += i * histogram[i];
-    }
-
-    int sumB = 0;
-    int wB = 0;
-    int wF = 0;
-    double mB, mF, max = 0.0;
-    double between = 0.0;
-    int threshold1 = 0, threshold2 = 0;
-
-    for (int i = 0; i < 256; ++i) {
-        wB += histogram[i];
-        if (wB == 0) continue;
-        wF = totalPixels - wB;
-        if (wF == 0) break;
-
-        sumB += i * histogram[i];
-        mB = (double)sumB / wB;
-        mF = (double)(sum - sumB) / wF;
-        between = wB * wF * (mB - mF) * (mB - mF);
-
-        if (between >= max) {
-            threshold1 = i;
-            if (between > max) {
-                threshold2 = i;
-            }
-            max = between;
-        }
-    }
-
-    int threshold = (threshold1 + threshold2) / 2;
-
-    // Créer l'image binaire
-    QImage binaryImage(grayImage.size(), QImage::Format_Grayscale8);
-
-    for (int y = 0; y < grayImage.height(); ++y) {
-        const uchar* srcLine = grayImage.constScanLine(y);
-        uchar* dstLine = binaryImage.scanLine(y);
-
-        for (int x = 0; x < grayImage.width(); ++x) {
-            dstLine[x] = (srcLine[x] > threshold) ? 255 : 0;
-        }
-    }
-
-    return binaryImage;
+    // Cette fonction n'est plus utilisée car nous redirigeons vers Google Lens
+    Q_UNUSED(grayImage)
+    return QImage();
 }

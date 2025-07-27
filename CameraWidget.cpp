@@ -1,4 +1,4 @@
-﻿#include "CameraWidget.h"
+#include "CameraWidget.h"
 #include "BarcodeValidator.h"
 #include <QInputDialog>
 #include <QMessageBox>
@@ -12,11 +12,11 @@
 #include <QSqlError>
 
 // ZXing includes
-#include <ZXing/ReadBarcode.h>
-#include <ZXing/Result.h>
-#include <ZXing/BarcodeFormat.h>
-#include <ZXing/ImageView.h>
-#include <ZXing/ReaderOptions.h>
+// #include <ZXing/ReadBarcode.h>
+// #include <ZXing/Result.h>
+// #include <ZXing/BarcodeFormat.h>
+// #include <ZXing/ImageView.h>
+// #include <ZXing/ReaderOptions.h>
 
 CameraWidget::CameraWidget(QWidget* parent)
     : QWidget(parent), cameraThread(nullptr), cameraWorker(nullptr),
@@ -373,77 +373,9 @@ void CameraWidget::onNetworkReplyFinished()
 
 void CameraWidget::processFrameForBarcodeZXing(const QPixmap& frame)
 {
-    if (scanned || frame.isNull()) {
-        return;
-    }
-
-    // Convertir QPixmap en QImage
-    QImage image = frame.toImage();
-    if (image.isNull()) {
-        return;
-    }
-
-    // Convertir au format RGB pour ZXing
-    QImage rgbImage = image.convertToFormat(QImage::Format_RGB888);
-
-    // Créer l'ImageView pour ZXing
-    ZXing::ImageView zxingImage(
-        rgbImage.constBits(),
-        rgbImage.width(),
-        rgbImage.height(),
-        ZXing::ImageFormat::RGB
-    );
-
-    // Configuration ZXing pour EAN-13
-    ZXing::ReaderOptions options;
-    options.setTryHarder(true);
-    options.setFormats({ ZXing::BarcodeFormat::EAN13 });
-
-    // Lecture du code-barre
-    ZXing::Result result = ZXing::ReadBarcode(zxingImage, options);
-
-    if (result.isValid()) {
-        QString codeBarres = QString::fromStdString(result.text());
-        qDebug() << "Code-barres EAN-13 détecté :" << codeBarres;
-
-        // Marquer comme scanné pour arrêter la détection
-        scanned = true;
-
-        // Arrêter les timers
-        if (frameTimer) frameTimer->stop();
-
-        // Calculer et vérifier la clé de contrôle
-        QString cleCalculee = calculerCleChiffrement(codeBarres.left(12));
-        int cleBarcode = codeBarres.right(1).toInt();
-
-        bool isValid = (cleCalculee.toInt() == cleBarcode);
-
-        if (isValid) {
-            statusLabel->setText(QString("✅ Code-barre EAN-13 valide détecté: %1").arg(codeBarres));
-            QMessageBox::information(this, "Code-barre détecté",
-                QString("✅ Code-barre EAN-13 valide !\n\n"
-                    "Code: %1\n"
-                    "Clé de contrôle: Correcte (%2)")
-                .arg(codeBarres, cleCalculee));
-        }
-        else {
-            statusLabel->setText(QString("❌ Code-barre EAN-13 invalide détecté: %1").arg(codeBarres));
-            QMessageBox::warning(this, "Code-barre détecté",
-                QString("❌ Code-barre EAN-13 invalide !\n\n"
-                    "Code: %1\n"
-                    "Clé de contrôle: Incorrecte (attendu: %2, trouvé: %3)")
-                .arg(codeBarres, cleCalculee, QString::number(cleBarcode)));
-        }
-
-        // Sauvegarder dans la base de données
-        saveBarcodeToDatabase(codeBarres, isValid ? "Scanner-Valide" : "Scanner-Invalide");
-
-        // Émettre le signal
-        emit barcodeDetected(codeBarres);
-
-        // Arrêter la caméra après détection
-        QTimer::singleShot(3000, this, &CameraWidget::stopCamera);
-    }
+    // Cette fonction n'est plus utilisée car nous redirigeons vers Google Lens
+    Q_UNUSED(frame)
+    return;
 }
 
 QString CameraWidget::calculerCleChiffrement(const QString& douzeChiffres)
