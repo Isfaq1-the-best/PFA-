@@ -1,4 +1,4 @@
-﻿#ifndef CAMERAWIDGET_H
+#ifndef CAMERAWIDGET_H
 #define CAMERAWIDGET_H
 
 #include <QWidget>
@@ -33,11 +33,11 @@
 #include <opencv2/highgui.hpp>
 
 // ZXing includes
-#include <ZXing/ReadBarcode.h>
-#include <ZXing/Result.h>
-#include <ZXing/BarcodeFormat.h>
-#include <ZXing/ImageView.h>
-#include <ZXing/ReaderOptions.h>
+// #include <ZXing/ReadBarcode.h>
+// #include <ZXing/Result.h>
+// #include <ZXing/BarcodeFormat.h>
+// #include <ZXing/ImageView.h>
+// #include <ZXing/ReaderOptions.h>
 
 class CameraWorker;
 

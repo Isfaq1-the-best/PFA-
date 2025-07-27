@@ -15,7 +15,7 @@ if(MSVC)
     # Support UTF-8
     add_compile_options(/utf-8)
     
-    # Définir WIN32_LEAN_AND_MEAN pour éviter les conflits
+    # Dï¿½finir WIN32_LEAN_AND_MEAN pour ï¿½viter les conflits
     add_definitions(-DWIN32_LEAN_AND_MEAN)
     add_definitions(-DNOMINMAX)
 endif()
@@ -25,8 +25,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# Trouver Qt6 - Configuration pour Qt VS Tools
-find_package(Qt6 REQUIRED COMPONENTS 
+# Trouver Qt5 - Configuration pour Qt VS Tools
+find_package(Qt5 REQUIRED COMPONENTS 
     Core 
     Widgets 
     Gui 
@@ -37,32 +37,32 @@ find_package(Qt6 REQUIRED COMPONENTS
 # Trouver OpenCV
 find_package(OpenCV REQUIRED)
 
-# ZXing (optionnel - pour une meilleure détection de codes-barres)
+# ZXing (optionnel - pour une meilleure dï¿½tection de codes-barres)
 # find_package(ZXing QUIET)
 # if(ZXing_FOUND)
-#     message(STATUS "ZXing trouvé: ${ZXing_VERSION}")
+#     message(STATUS "ZXing trouvï¿½: ${ZXing_VERSION}")
 #     add_definitions(-DUSE_ZXING)
 # else()
-#     message(STATUS "ZXing non trouvé - utilisation d'OpenCV uniquement")
+#     message(STATUS "ZXing non trouvï¿½ - utilisation d'OpenCV uniquement")
 # endif()
 
-# Vérifier que Qt a été trouvé
-if(NOT Qt6_FOUND)
-    message(FATAL_ERROR "Qt6 non trouvé. Assurez-vous que Qt VS Tools est correctement configuré.")
+# Vï¿½rifier que Qt a ï¿½tï¿½ trouvï¿½
+if(NOT Qt5_FOUND)
+    message(FATAL_ERROR "Qt6 non trouvï¿½. Assurez-vous que Qt VS Tools est correctement configurï¿½.")
 endif()
 
-# Vérifier qu'OpenCV a été trouvé
+# Vï¿½rifier qu'OpenCV a ï¿½tï¿½ trouvï¿½
 if(NOT OpenCV_FOUND)
-    message(FATAL_ERROR "OpenCV non trouvé. Installez OpenCV et configurez OpenCV_DIR.")
+    message(FATAL_ERROR "OpenCV non trouvï¿½. Installez OpenCV et configurez OpenCV_DIR.")
 endif()
 
 # Afficher les informations Qt pour debug
-message(STATUS "Qt6 trouvé: ${Qt6_VERSION}")
+message(STATUS "Qt6 trouvï¿½: ${Qt6_VERSION}")
 message(STATUS "Qt6 Directory: ${Qt6_DIR}")
-message(STATUS "OpenCV trouvé: ${OpenCV_VERSION}")
+message(STATUS "OpenCV trouvï¿½: ${OpenCV_VERSION}")
 message(STATUS "OpenCV Directory: ${OpenCV_DIR}")
 
-# Définir les fichiers sources
+# Dï¿½finir les fichiers sources
 set(SOURCES
     main.cpp
     SplashWindow.cpp
@@ -87,39 +87,39 @@ set(RESOURCES
     # resources.qrc
 )
 
-# Créer l'exécutable Windows
+# Crï¿½er l'exï¿½cutable Windows
 add_executable(EPOBarcodeValidator WIN32 ${SOURCES} ${HEADERS} ${RESOURCES})
 
-# Propriétés spécifiques à Windows
+# Propriï¿½tï¿½s spï¿½cifiques ï¿½ Windows
 set_target_properties(EPOBarcodeValidator PROPERTIES
     WIN32_EXECUTABLE TRUE
     OUTPUT_NAME "EPOBarcodeValidator"
     DEBUG_POSTFIX "_d"
 )
 
-# Lier les bibliothèques Qt
+# Lier les bibliothÃ¨ques Qt
 target_link_libraries(EPOBarcodeValidator
-    Qt6::Core
-    Qt6::Widgets
-    Qt6::Gui
-    Qt6::Sql
-    Qt6::Network
+    Qt5::Core
+    Qt5::Widgets
+    Qt5::Gui
+    Qt5::Sql
+    Qt5::Network
     ${OpenCV_LIBS}
-    # ${ZXing_LIBRARIES}  # Décommentez si ZXing est installé
+    # zxing
 )
 
-# Répertoires d'inclusion
+# Rpertoires d'inclusion
 target_include_directories(EPOBarcodeValidator PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${Qt6Core_INCLUDE_DIRS}
-    ${Qt6Widgets_INCLUDE_DIRS}
-    ${Qt6Gui_INCLUDE_DIRS}
-    ${Qt6Sql_INCLUDE_DIRS}
-    ${Qt6Network_INCLUDE_DIRS}
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5Gui_INCLUDE_DIRS}
+    ${Qt5Sql_INCLUDE_DIRS}
+    ${Qt5Network_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
 )
 
-# Définitions de compilation
+# Dï¿½finitions de compilation
 target_compile_definitions(EPOBarcodeValidator PRIVATE
     QT_WIDGETS_LIB
     QT_GUI_LIB
@@ -134,15 +134,15 @@ target_compile_definitions(EPOBarcodeValidator PRIVATE
     $<$<CONFIG:Release>:QT_NO_DEBUG_OUTPUT>
 )
 
-# Déploiement automatique des DLLs Qt (windeployqt)
+# Dï¿½ploiement automatique des DLLs Qt (windeployqt)
 if(WIN32)
     # Trouver windeployqt
-    get_target_property(QT6_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
-    get_filename_component(QT6_WINDEPLOYQT_EXECUTABLE ${QT6_QMAKE_EXECUTABLE} PATH)
-    set(QT6_WINDEPLOYQT_EXECUTABLE "${QT6_WINDEPLOYQT_EXECUTABLE}/windeployqt.exe")
+    get_target_property(QT5_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
+    get_filename_component(QT5_WINDEPLOYQT_EXECUTABLE ${QT5_QMAKE_EXECUTABLE} PATH)
+    set(QT5_WINDEPLOYQT_EXECUTABLE "${QT5_WINDEPLOYQT_EXECUTABLE}/windeployqt.exe")
 
     if(EXISTS ${QT6_WINDEPLOYQT_EXECUTABLE})
-        # Commande post-build pour déployer les DLLs Qt
+        # Commande post-build pour dï¿½ployer les DLLs Qt
         add_custom_command(TARGET EPOBarcodeValidator POST_BUILD
             COMMAND ${QT6_WINDEPLOYQT_EXECUTABLE} 
                 --verbose 2
@@ -150,17 +150,17 @@ if(WIN32)
                 --no-system-d3d-compiler
                 --no-opengl-sw
                 $<TARGET_FILE:EPOBarcodeValidator>
-            COMMENT "Déploiement des bibliothèques Qt"
+            COMMENT "Dï¿½ploiement des bibliothï¿½ques Qt"
         )
-        message(STATUS "windeployqt trouvé: ${QT6_WINDEPLOYQT_EXECUTABLE}")
+        message(STATUS "windeployqt trouvï¿½: ${QT6_WINDEPLOYQT_EXECUTABLE}")
     else()
-        message(WARNING "windeployqt non trouvé. Les DLLs Qt devront être copiées manuellement.")
+        message(WARNING "windeployqt non trouvï¿½. Les DLLs Qt devront ï¿½tre copiï¿½es manuellement.")
     endif()
 endif()
 
-# Configuration pour différents générateurs Visual Studio
+# Configuration pour diffï¿½rents gï¿½nï¿½rateurs Visual Studio
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    # Définir le projet de démarrage
+    # Dï¿½finir le projet de dï¿½marrage
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EPOBarcodeValidator)
     
     # Organiser les fichiers dans l'explorateur de solutions
@@ -170,7 +170,7 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
         source_group("Resource Files" FILES ${RESOURCES})
     endif()
     
-    # Configuration des répertoires de sortie
+    # Configuration des rï¿½pertoires de sortie
     set_target_properties(EPOBarcodeValidator PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
@@ -186,7 +186,7 @@ install(TARGETS EPOBarcodeValidator
     ARCHIVE DESTINATION lib
 )
 
-# Installer les DLLs Qt nécessaires
+# Installer les DLLs Qt nï¿½cessaires
 if(WIN32)
     install(CODE "
         include(BundleUtilities)
@@ -200,10 +200,10 @@ message(STATUS "Version: ${PROJECT_VERSION}")
 message(STATUS "Compilateur: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "Standard C++: ${CMAKE_CXX_STANDARD}")
 message(STATUS "Type de build: ${CMAKE_BUILD_TYPE}")
-message(STATUS "Générateur: ${CMAKE_GENERATOR}")
+message(STATUS "Gï¿½nï¿½rateur: ${CMAKE_GENERATOR}")
 message(STATUS "==========================================")
 
-# Cibles personnalisées pour le développement
+# Cibles personnalisï¿½es pour le dï¿½veloppement
 add_custom_target(run
     COMMAND EPOBarcodeValidator
     DEPENDS EPOBarcodeValidator

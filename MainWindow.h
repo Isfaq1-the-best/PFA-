@@ -1,4 +1,4 @@
-﻿#ifndef MAINWINDOW_H
+#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -20,11 +20,11 @@
 #include <QDebug>
 
 // ZXing includes
-#include <ZXing/ReadBarcode.h>
-#include <ZXing/Result.h>
-#include <ZXing/BarcodeFormat.h>
-#include <ZXing/ImageView.h>
-#include <ZXing/ReaderOptions.h>
+// #include <ZXing/ReadBarcode.h>
+// #include <ZXing/Result.h>
+// #include <ZXing/BarcodeFormat.h>
+// #include <ZXing/ImageView.h>
+// #include <ZXing/ReaderOptions.h>
 
 #include "BarcodeValidator.h"
 #include "DatabaseManager.h"
@@ -48,6 +48,8 @@ private slots:
     void showFAQ();
     void showHistory();
     void onBarcodeValidated(const QString& barcode, bool isValid);
+    void redirectToGoogleLens(const QString& imagePath);
+    void handleGoogleLensResult();
 
 private:
     // UI Components
@@ -93,8 +95,7 @@ private:
     // Image processing
     QImage currentImage;
     QLabel* imagePreview;
-    QPushButton* convertButton;
-    QPushButton* decodeButton;
+    QPushButton* googleLensResultButton;
     QPushButton* deleteImageButton;
 
     void setupUI();
