@@ -1,4 +1,4 @@
-﻿#ifndef MAINWINDOW_H
+#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -30,6 +30,7 @@
 #include "DatabaseManager.h"
 #include "CameraWidget.h"
 #include "ThemeManager.h"
+#include "GoogleVisionHelper.h"
 
 class MainWindow : public QMainWindow
 {
