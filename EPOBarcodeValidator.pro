@@ -5,7 +5,7 @@ CONFIG += c++17
 TARGET = EPOBarcodeValidator
 TEMPLATE = app
 
-# Définir la version de l'application
+# Dï¿½finir la version de l'application
 VERSION = 1.0.0
 QMAKE_TARGET_COMPANY = "EPO Project"
 QMAKE_TARGET_PRODUCT = "EPO Barcode Validator"
@@ -20,7 +20,8 @@ SOURCES += \
     BarcodeValidator.cpp \
     DatabaseManager.cpp \
     CameraWidget.cpp \
-    ThemeManager.cpp
+    ThemeManager.cpp \
+    BarcodeImageWidget.cpp
 
 # Headers
 HEADERS += \
@@ -29,12 +30,13 @@ HEADERS += \
     BarcodeValidator.h \
     DatabaseManager.h \
     CameraWidget.h \
-    ThemeManager.h
+    ThemeManager.h \
+    BarcodeImageWidget.h
 
-# Ressources (si vous avez des icônes)
+# Ressources (si vous avez des icï¿½nes)
 # RESOURCES += resources.qrc
 
-# Configuration pour différentes plateformes
+# Configuration pour diffï¿½rentes plateformes
 win32 {
     RC_ICONS = icon.ico
     QMAKE_TARGET_PRODUCT = "EPO Barcode Validator"
@@ -58,29 +60,20 @@ CONFIG(release, debug|release) {
 # Avertissements
 QMAKE_CXXFLAGS += -Wall -Wextra
 
-# OpenCV
+# OpenCV et ZXing
 win32 {
-    # Ajustez le chemin selon votre installation OpenCV
-    OPENCV_PATH = C:/opencv/build
-    INCLUDEPATH += $$OPENCV_PATH/include
+    # Configuration simplifiÃ©e pour Windows - Qt uniquement
+    # Si ZXing est disponible, dÃ©commentez les lignes suivantes :
+    # ZXING_PATH = C:/vcpkg/installed/x64-windows
+    # INCLUDEPATH += $$ZXING_PATH/include
+    # LIBS += -L$$ZXING_PATH/lib -lZXing
     
-    CONFIG(debug, debug|release) {
-        LIBS += -L$$OPENCV_PATH/x64/vc16/lib \
-                -lopencv_core4d \
-                -lopencv_imgproc4d \
-                -lopencv_imgcodecs4d \
-                -lopencv_videoio4d
-    } else {
-        LIBS += -L$$OPENCV_PATH/x64/vc16/lib \
-                -lopencv_core4 \
-                -lopencv_imgproc4 \
-                -lopencv_imgcodecs4 \
-                -lopencv_videoio4
-    }
+    # Sinon, utilisation de Qt uniquement pour le traitement d'images
+    DEFINES += QT_ONLY_IMAGE_PROCESSING
 }
 
 unix {
-    # Pour Linux/Mac avec OpenCV installé via package manager
-    LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio
-    INCLUDEPATH += /usr/local/include/opencv4
+    # Pour Linux/Mac avec OpenCV installÃ© via package manager
+    LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio -lZXing
+    INCLUDEPATH += /usr/include/opencv4
 }

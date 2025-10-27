@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #ifndef DATABASEMANAGER_H
 #define DATABASEMANAGER_H
 
@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include <QList>
 #include <QMutex>
+#include <QVariant>
 
 struct BarcodeRecord {
     int id;

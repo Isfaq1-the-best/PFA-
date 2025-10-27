@@ -1,4 +1,4 @@
-﻿#ifndef MAINWINDOW_H
+#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -30,6 +30,7 @@
 #include "DatabaseManager.h"
 #include "CameraWidget.h"
 #include "ThemeManager.h"
+#include "BarcodeImageWidget.h"
 
 class MainWindow : public QMainWindow
 {
@@ -48,6 +49,11 @@ private slots:
     void showFAQ();
     void showHistory();
     void onBarcodeValidated(const QString& barcode, bool isValid);
+    void onImageProcessingFinished(const QString& barcode, bool success);
+    void onImageProcessingProgress(int percentage);
+
+signals:
+    void analysisProgressUpdate(int percentage, const QString& status);
 
 private:
     // UI Components
@@ -92,10 +98,11 @@ private:
 
     // Image processing
     QImage currentImage;
-    QLabel* imagePreview;
-    QPushButton* convertButton;
-    QPushButton* decodeButton;
+    BarcodeImageWidget* imagePreview;
+    QPushButton* analyzeImageButton;
     QPushButton* deleteImageButton;
+    QLabel* analysisStatusLabel;
+    QProgressBar* imageProgressBar;
 
     void setupUI();
     void setupConnections();
@@ -109,9 +116,39 @@ private:
     QString getFrameStyle() const;
     QString calculerCleChiffrement(const QString& douzeChiffres);
     void setupImageProcessingView();
+    void processImageAutomatically();
+    void analyzeImageWithMultipleTechniques(const QImage& image);
     QImage enhanceImageForBarcode(const QImage& originalImage);
     QString detectBarcodeFromImage(const QImage& image);
     QImage createBinaryImage(const QImage& grayImage);
+    QImage applyGaussianBlur(const QImage& image);
+    QImage applySharpenFilter(const QImage& image);
+    QImage adjustGamma(const QImage& image, double gamma);
+    QStringList tryMultipleDetectionMethods(const QImage& image);
+    
+    // Méthodes de prétraitement avancées (style Google Lens)
+    QImage preprocessImageAdvanced(const QImage& originalImage);
+    QImage normalizeIllumination(const QImage& image);
+    QImage enhanceContrast(const QImage& image);
+    QImage correctPerspective(const QImage& image);
+    QImage removeNoise(const QImage& image);
+    QImage binarizeAdaptive(const QImage& image);
+    QImage morphologyClose(const QImage& image);
+    QImage detectAndCorrectRotation(const QImage& image);
+    QImage cropToBarcode(const QImage& image);
+    QImage standardizeSize(const QImage& image, int targetWidth = 800);
+    double calculateImageSharpness(const QImage& image);
+    QImage unsharpMask(const QImage& image, double amount = 1.5);
+    QImage clahe(const QImage& image); // Contrast Limited Adaptive Histogram Equalization
+    double calculateHorizontalLineScore(const QImage& image);
+    QRect detectBarcodeRegion(const QImage& image); // Détection de la région du code-barre
+    
+    // Méthodes auxiliaires pour la détection de région
+    double analyzeBarcodePattern(const QImage& grayImage, const QRect& region);
+    double calculateTransitionRegularity(const QImage& grayImage, const QRect& region);
+    QRect expandBarcodeRegion(const QImage& grayImage, const QRect& initialRegion);
+    bool hasVerticalTransitions(const QImage& grayImage, int x, int top, int bottom);
+    bool hasHorizontalTransitions(const QImage& grayImage, int left, int right, int y);
 };
 
 #endif // MAINWINDOW_H
